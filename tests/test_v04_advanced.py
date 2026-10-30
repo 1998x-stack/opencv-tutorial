@@ -14,11 +14,15 @@ import cv2
 import numpy as np
 import pytest
 
-from opencv_tutorial.onnx_lab import (benchmark_onnx, load_net, make_test_onnx,
-                                      run_onnx)
-from opencv_tutorial.pose3d import (integrate_unit_poses, pnp_fixture_report,
-                                    relative_pose, solve_pnp_ransac,
-                                    synthetic_correspondences, vo_fixture_report)
+from opencv_tutorial.onnx_lab import benchmark_onnx, load_net, make_test_onnx, run_onnx
+from opencv_tutorial.pose3d import (
+    integrate_unit_poses,
+    pnp_fixture_report,
+    relative_pose,
+    solve_pnp_ransac,
+    synthetic_correspondences,
+    vo_fixture_report,
+)
 from opencv_tutorial.server import LabHandler, advanced_payload, encode_image
 from opencv_tutorial.stereo import stereo_depth, stereo_fixture_report, synthetic_stereo
 

@@ -43,3 +43,5 @@
 #advanced .intermediate-metrics { overflow: auto; max-height: 380px; min-width: 0; }
 #advanced .intermediate-toolbar { flex-wrap: wrap; gap: 9px; }
 #advanced figure img { object-fit: contain; width: 100%; }
+
+#advanced figure img:not([src]) { visibility: hidden; }

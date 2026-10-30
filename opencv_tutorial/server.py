@@ -18,10 +18,9 @@ from .experiments import STUDIES, run_study
 from .intermediate import synthetic_panorama_pair, synthetic_translation, track_synthetic
 from .optical_flow import sparse_lk
 from .panorama import stitch_pair
-from .pose3d import (monocular_motion, pnp_fixture_report, pose_fixture_image,
-                     vo_fixture_report)
-from .stereo import stereo_depth, synthetic_stereo, stereo_fixture_report
 from .pipeline import ALGORITHMS, run_pipeline
+from .pose3d import monocular_motion, pnp_fixture_report, pose_fixture_image, vo_fixture_report
+from .stereo import stereo_depth, stereo_fixture_report, synthetic_stereo
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
 MAX_REQUEST = 8 * 1024 * 1024

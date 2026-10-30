@@ -1,4 +1,4 @@
-> **v0.4 intermediate observatory** — adds reproducible ORB/RANSAC panorama stitching, sparse LK flow and deterministic centroid tracking on top of the v0.2 beginner lab. This stacked branch depends on the v0.2 PR.
+> **v0.4 advanced geometry & inference observatory** — adds calibrated stereo-depth experiments, robust PnP, scale-ambiguous visual odometry, local OpenCV DNN inference and measured CPU latency on top of v0.3. Stacked PR dependencies remain v0.1 → v0.2 → v0.3 → v0.4.
 
 # Vision Lab · OpenCV from Scratch
 

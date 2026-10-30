@@ -38,8 +38,9 @@ def stereo_depth(left: np.ndarray, right: np.ndarray, *, fx_px: float,
             or block_size % 2 != 1):
         raise ValueError("Invalid SGBM parameters (disparities multiple of 16, odd block 3..21)")
     height, width = left.shape[:2]
-    if min(height, width) < 32 or width <= min_disparity + num_disparities + block_size:
-        raise ValueError("Image too small for stereo search range")
+    if (min(height, width) < 32 or height * width > 2_000_000 or
+            width <= min_disparity + num_disparities + block_size):
+        raise ValueError("Stereo images must be <=2MP and wide enough for disparity search")
     a = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY) if left.ndim == 3 else left
     b = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY) if right.ndim == 3 else right
     channels = 1

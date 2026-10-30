@@ -13,13 +13,13 @@ from .experiments import STUDIES, run_study
 from .geometry import detect_document, warp_document
 from .intermediate import benchmark_synthetic
 from .motion import MotionDetector
+from .onnx_lab import benchmark_onnx, make_test_onnx, run_onnx
 from .optical_flow import sparse_lk
 from .panorama import stitch_pair
-from .stereo import stereo_depth, stereo_fixture_report
-from .pose3d import pnp_fixture_report, vo_fixture_report
-from .onnx_lab import make_test_onnx, run_onnx, benchmark_onnx
 from .pipeline import ALGORITHMS, run_pipeline
+from .pose3d import pnp_fixture_report, vo_fixture_report
 from .server import serve
+from .stereo import stereo_depth, stereo_fixture_report
 from .tracking import CentroidTracker
 
 
