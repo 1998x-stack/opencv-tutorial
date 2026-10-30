@@ -15,6 +15,9 @@ from .intermediate import benchmark_synthetic
 from .motion import MotionDetector
 from .optical_flow import sparse_lk
 from .panorama import stitch_pair
+from .stereo import stereo_depth, stereo_fixture_report
+from .pose3d import pnp_fixture_report, vo_fixture_report
+from .onnx_lab import make_test_onnx, run_onnx, benchmark_onnx
 from .pipeline import ALGORITHMS, run_pipeline
 from .server import serve
 from .tracking import CentroidTracker
@@ -66,6 +69,34 @@ def main(argv: list[str] | None = None) -> int:
     p_eval = sub.add_parser("evaluate-intermediate", help="Synthetic geometric sanity checks")
     p_eval.add_argument("--seed", type=int, default=17)
     p_eval.add_argument("--output", type=Path)
+    p_stereo = sub.add_parser("stereo", help="Calibrated rectified SGBM depth estimation")
+    p_stereo.add_argument("--left", type=Path, required=True)
+    p_stereo.add_argument("--right", type=Path, required=True)
+    p_stereo.add_argument("--fx", type=float, required=True, help="Focal length in pixels")
+    p_stereo.add_argument("--baseline", type=float, required=True, help="Camera baseline in meters")
+    p_stereo.add_argument("--num-disparities", type=int, default=64)
+    p_stereo.add_argument("--output", type=Path, required=True)
+    p_stereo.add_argument("--report", type=Path)
+    p_advanced = sub.add_parser("evaluate-advanced", help="Stereo/PnP/VO numeric fixtures")
+    p_advanced.add_argument("--seed", type=int, default=17)
+    p_advanced.add_argument("--output", type=Path)
+    p_toy = sub.add_parser("onnx-fixture", help="Generate an offline tiny ONNX sanity model")
+    p_toy.add_argument("--output", type=Path, required=True)
+    p_infer = sub.add_parser("onnx-infer", help="Run local ONNX model via OpenCV DNN")
+    p_infer.add_argument("--model", type=Path, required=True)
+    p_infer.add_argument("--input", type=Path, required=True)
+    p_infer.add_argument("--width", type=int, default=16)
+    p_infer.add_argument("--height", type=int, default=16)
+    p_infer.add_argument("--backend", choices=("cpu", "cuda"), default="cpu")
+    p_infer.add_argument("--sha256", default=None)
+    p_bdn = sub.add_parser("bench-dnn", help="Warmup/repeat local OpenCV DNN forward")
+    p_bdn.add_argument("--model", type=Path, required=True)
+    p_bdn.add_argument("--backend", choices=("cpu", "cuda"), default="cpu")
+    p_bdn.add_argument("--rounds", type=int, default=15)
+    p_bdn.add_argument("--warmups", type=int, default=3)
+    p_bdn.add_argument("--image-size", type=int, default=16)
+    p_bdn.add_argument("--sha256", default=None)
+    p_bdn.add_argument("--output", type=Path)
     sub.add_parser("course", help="Print the 24-week curriculum as JSON")
     args = parser.parse_args(argv)
     if args.command == "serve":
@@ -100,6 +131,56 @@ def main(argv: list[str] | None = None) -> int:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(content, encoding="utf-8")
         print(content)
+        return 0
+    if args.command == "evaluate-advanced":
+        output = {"stereo": stereo_fixture_report(args.seed),
+                  "pnp": pnp_fixture_report(args.seed), "vo": vo_fixture_report(args.seed),
+                  "assumptions": ["Synthetic known calibration/geometry",
+                                  "Monocular VO translation has unknown scale"]}
+        data = json.dumps(output, indent=2, allow_nan=False)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(data, encoding="utf-8")
+        print(data)
+        return 0
+    if args.command == "stereo":
+        left, right = cv2.imread(str(args.left)), cv2.imread(str(args.right))
+        if left is None or right is None:
+            raise FileNotFoundError("Cannot read stereo pair")
+        result = stereo_depth(left, right, fx_px=args.fx,
+                              baseline_m=args.baseline, num_disparities=args.num_disparities)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        if not cv2.imwrite(str(args.output), result.visualization):
+            raise RuntimeError("Cannot write stereo output")
+        report = json.dumps(result.stats, indent=2, allow_nan=False)
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(report, encoding="utf-8")
+        print(report)
+        return 0
+    if args.command == "onnx-fixture":
+        digest = make_test_onnx(args.output)
+        print(json.dumps({"model": str(args.output), "sha256": digest,
+                          "purpose": "I/O fixture only; no semantics or trained classes"}))
+        return 0
+    if args.command == "onnx-infer":
+        image = cv2.imread(str(args.input))
+        if image is None:
+            raise FileNotFoundError("Cannot decode image")
+        report = run_onnx(args.model, image, input_width=args.width,
+                          input_height=args.height, backend=args.backend,
+                          expected_sha256=args.sha256)
+        print(json.dumps(report, indent=2, allow_nan=False))
+        return 0
+    if args.command == "bench-dnn":
+        report = benchmark_onnx(args.model, backend=args.backend,
+                                rounds=args.rounds, warmups=args.warmups,
+                                image_size=args.image_size, expected_sha256=args.sha256)
+        data = json.dumps(report, indent=2, allow_nan=False)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(data, encoding="utf-8")
+        print(data)
         return 0
     if args.command == "evaluate-intermediate":
         result = benchmark_synthetic(seed=args.seed)

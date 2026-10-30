@@ -18,6 +18,9 @@ from .experiments import STUDIES, run_study
 from .intermediate import synthetic_panorama_pair, synthetic_translation, track_synthetic
 from .optical_flow import sparse_lk
 from .panorama import stitch_pair
+from .pose3d import (monocular_motion, pnp_fixture_report, pose_fixture_image,
+                     vo_fixture_report)
+from .stereo import stereo_depth, synthetic_stereo, stereo_fixture_report
 from .pipeline import ALGORITHMS, run_pipeline
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -89,6 +92,30 @@ def intermediate_payload(data: dict, operation: str) -> dict:
     raise ValueError("Unknown intermediate operation")
 
 
+def advanced_payload(data: dict, operation: str) -> dict:
+    """No model paths or arbitrary code accepted by the HTTP API."""
+    if operation == "stereo":
+        first, second = decode_image(data["first"]), decode_image(data["second"])
+        fx = float(data.get("fx_px", 420))
+        baseline = float(data.get("baseline_m", .12))
+        result = stereo_depth(first, second, fx_px=fx, baseline_m=baseline,
+                              num_disparities=int(data.get("num_disparities", 64)),
+                              block_size=int(data.get("block_size", 5)))
+        return {"image": encode_image(result.visualization), "metrics": result.stats,
+                "note": "Rectification and camera calibration assumed; invalid pixels black"}
+    if operation == "vo":
+        first, second = decode_image(data["first"]), decode_image(data["second"])
+        fx = float(data["fx_px"])
+        fy = float(data.get("fy_px", fx))
+        cx, cy = float(data.get("cx_px", first.shape[1] / 2)), float(data.get(
+            "cy_px", first.shape[0] / 2))
+        K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], np.float64)
+        pose, painted = monocular_motion(first, second, K)
+        return {"image": encode_image(painted), "rotation": pose.rotation.tolist(),
+                "unit_translation": pose.translation.tolist(), "metrics": pose.stats}
+    raise ValueError("Unknown advanced operation")
+
+
 class LabHandler(BaseHTTPRequestHandler):
     def _json(self, status: int, data: dict | list) -> None:
         content = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -120,12 +147,23 @@ class LabHandler(BaseHTTPRequestHandler):
             return self._json(200, {"frames": [encode_image(f) for f in frames],
                                     "events": events,
                                     "note": "Known-box synthetic association demo, not MOG2 detections"})
+        if path == "/api/advanced/sample":
+            left, right = synthetic_stereo()
+            return self._json(200, {"stereo": [encode_image(left), encode_image(right)],
+                                    "fixture": stereo_fixture_report(),
+                                    "calibration": {"fx_px": 420, "baseline_m": .12}})
+        if path == "/api/advanced/geometry-demo":
+            return self._json(200, {"pnp": pnp_fixture_report(),
+                                    "vo": vo_fixture_report(),
+                                    "image": encode_image(pose_fixture_image()),
+                                    "note": "Ground-truth synthetic points; monocular trajectory scale unknown"})
         if path == "/api/sample":
             return self._json(200, {"image": encode_image(make_sample())})
         static_files = {"/": ("index.html", "text/html; charset=utf-8"),
                         "/style.css": ("style.css", "text/css; charset=utf-8"),
                         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                        "/intermediate.js": ("intermediate.js", "text/javascript; charset=utf-8")}
+                        "/intermediate.js": ("intermediate.js", "text/javascript; charset=utf-8"),
+                        "/advanced.js": ("advanced.js", "text/javascript; charset=utf-8")}
         if path not in static_files:
             return self._json(404, {"error": "Not found"})
         filename, mime = static_files[path]
@@ -140,7 +178,8 @@ class LabHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         path = urlsplit(self.path).path
         if path not in ("/api/process", "/api/ablate",
-                        "/api/intermediate/panorama", "/api/intermediate/flow"):
+                        "/api/intermediate/panorama", "/api/intermediate/flow",
+                        "/api/advanced/stereo", "/api/advanced/vo"):
             return self._json(404, {"error": "Not found"})
         try:
             length = int(self.headers.get("Content-Length", "-1"))
@@ -155,6 +194,8 @@ class LabHandler(BaseHTTPRequestHandler):
                 output = process_payload(request)
             elif path == "/api/ablate":
                 output = ablation_payload(request)
+            elif path.startswith("/api/advanced/"):
+                output = advanced_payload(request, path.rsplit("/", 1)[-1])
             else:
                 output = intermediate_payload(request, path.rsplit("/", 1)[-1])
         except (ValueError, KeyError, TypeError, json.JSONDecodeError, OverflowError) as exc:
