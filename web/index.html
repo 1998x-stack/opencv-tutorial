@@ -8,11 +8,12 @@
   <title>Vision Lab — OpenCV from Scratch</title>
   <link rel="stylesheet" href="/style.css">
   <script defer src="/app.js"></script>
+  <script defer src="/intermediate.js"></script>
 </head>
 <body>
   <header class="site-nav">
-    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.2</span></a>
-    <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
+    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.3</span></a>
+    <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#intermediate">Motion Lab</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
     <a class="nav-github" href="https://github.com/1998x-stack/opencv-tutorial" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
   </header>
   <main id="top">
@@ -21,7 +22,7 @@
       <h1>See how images<br><span class="gradient-text">become understanding.</span></h1>
       <p class="hero-sub">A hands-on journey from the first pixel to computer vision systems. Explore each algorithm, tune every parameter, and see the mathematics come alive.</p>
       <div class="hero-actions"><a class="primary-btn" href="#lab">Enter the laboratory <span>↗</span></a><a href="#curriculum" class="text-btn">Explore 24 weeks <span>→</span></a></div>
-      <div class="hero-meta"><span><b>24</b> structured lessons</span><i></i><span><b>08</b> core algorithms</span><i></i><span><b>100%</b> offline ready</span></div>
+      <div class="hero-meta"><span><b>24</b> structured lessons</span><i></i><span><b>08</b> foundational operators</span><i></i><span><b>100%</b> offline ready</span></div>
       <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
     </section>
     <section id="lab" class="lab-section page-width">
@@ -78,6 +79,33 @@
             <div class="study-results" id="studyResults" aria-label="Parameter study results"></div>
           </section>
         </div>
+      </div>
+    </section>
+    <section id="intermediate" class="intermediate-section page-width">
+      <div class="section-heading"><div><div class="kicker">02 / FEATURE &amp; MOTION LAB</div><h2>See correspondences<span class="accent-dot">.</span></h2><p>Homography, pyramidal LK flow, and multi-frame identity association. Actual algorithms, inspectable measurements.</p></div></div>
+      <div class="intermediate-panel">
+        <div class="intermediate-toolbar">
+          <label for="pairMode">Experiment</label><select id="pairMode"><option value="panorama">ORB + RANSAC panorama</option><option value="flow">Pyramidal LK optical flow</option></select>
+          <button id="pairReset" class="quiet-btn">Restore sample pair</button>
+          <button id="pairRun" class="primary-btn">Stitch panorama →</button>
+        </div>
+        <div class="pair-grid">
+          <figure><img id="pairFirst" alt="First input image"><figcaption>FRAME A <label class="quiet-btn">Upload A<input type="file" id="pairInputFirst" accept="image/*" hidden></label></figcaption></figure>
+          <figure><img id="pairSecond" alt="Second input image"><figcaption>FRAME B <label class="quiet-btn">Upload B<input type="file" id="pairInputSecond" accept="image/*" hidden></label></figcaption></figure>
+        </div>
+        <p id="intermediateStatus" role="status" aria-live="polite" class="explainer">Loading examples…</p>
+        <div class="pair-grid">
+          <figure><img id="intermediateOutput" alt="Computed panorama or optical flow result"><figcaption>COMPUTED OUTPUT</figcaption></figure>
+          <figure><img id="intermediatePreview" alt="Inlier candidate feature matches when applicable"><figcaption>FEATURE MATCH PREVIEW (PANORAMA)</figcaption></figure>
+        </div>
+        <pre id="intermediateMetrics" class="intermediate-metrics" aria-label="Algorithm metrics">Choose Run to inspect real results.</pre>
+      </div>
+      <div class="intermediate-panel tracking-panel">
+        <div class="intermediate-toolbar"><strong>Multi-frame centroid association</strong><button id="trackingLoad" class="primary-btn">Load synthetic sequence →</button></div>
+        <p class="explainer">Known-box fixture isolates track association; real-video CLI uses MOG2 detections. A centroid matcher can swap identities during crossings or long occlusions.</p>
+        <img id="trackingImage" alt="Synthetic tracking sequence" class="tracking-output">
+        <div class="playback-row"><label for="trackingFrame" id="trackingLabel">Frame —</label><input id="trackingFrame" type="range" min="0" max="7" value="0"></div>
+        <pre id="trackingEvents" class="intermediate-metrics">No tracks yet.</pre>
       </div>
     </section>
     <section id="curriculum" class="curriculum-section page-width"><div class="section-heading"><div><div class="kicker">02 / LEARNING PATH</div><h2>24 weeks. One foundation<span class="accent-dot">.</span></h2><p>Progress from pixels to multiview geometry and production-ready vision systems.</p></div></div><div class="tab-row" role="group" aria-label="Curriculum level"><button data-level="All" class="tab active">All modules</button><button data-level="Beginner" class="tab">01 / Beginner</button><button data-level="Intermediate" class="tab">02 / Intermediate</button><button data-level="Advanced" class="tab">03 / Advanced</button></div><div id="weekGrid" class="week-grid"></div></section>

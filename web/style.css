@@ -20,3 +20,19 @@
 .candidate strong,.candidate span{display:block;margin:9px 11px;overflow-wrap:anywhere}
 .candidate strong{font-size:12px}.candidate span{font-size:11px;color:#adc0dc}
 @media(max-width:460px){.learning-panel{padding:12px}.study-results{grid-template-columns:1fr}}
+
+/* v0.3 intermediate observatory */
+.intermediate-section{padding-bottom:100px}
+.intermediate-panel{border:1px solid #334864;border-radius:16px;background:#131e31;padding:24px;margin-bottom:18px}
+.intermediate-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:18px}
+.intermediate-toolbar label{font-size:12px;color:#aebed9}
+.intermediate-toolbar select{flex:1;min-width:220px;background:#1b2c45;color:#f4f7ff;border:1px solid #526884;border-radius:8px;padding:11px}
+.pair-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:15px}
+.pair-grid figure{padding:0;margin:0;min-width:0;background:#0b1628;border:1px solid #2e425e;border-radius:10px;overflow:hidden}
+.pair-grid img{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#0a1424}
+.pair-grid figcaption{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;font-weight:750;letter-spacing:1px;color:#9cb0cc;padding:12px}
+.pair-grid label{cursor:pointer}
+.intermediate-metrics{white-space:pre-wrap;overflow-wrap:anywhere;color:#c9daef;line-height:1.6;background:#081426;border:1px solid #283d56;padding:14px;border-radius:9px;font-size:12px;max-height:270px;overflow:auto}
+.tracking-output{display:block;max-width:100%;width:720px;aspect-ratio:16/9;object-fit:contain;background:#0b1424;border-radius:9px;margin:0 auto 15px}
+.tracking-panel .playback-row input{accent-color:#58e2d1}
+@media(max-width:660px){.intermediate-panel{padding:12px}.pair-grid{grid-template-columns:1fr}.intermediate-toolbar select{min-width:130px}}

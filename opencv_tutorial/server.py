@@ -15,6 +15,9 @@ import numpy as np
 from .algorithms import make_sample
 from .curriculum import get_curriculum
 from .experiments import STUDIES, run_study
+from .intermediate import synthetic_panorama_pair, synthetic_translation, track_synthetic
+from .optical_flow import sparse_lk
+from .panorama import stitch_pair
 from .pipeline import ALGORITHMS, run_pipeline
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -71,6 +74,21 @@ def ablation_payload(data: dict) -> dict:
             for key, value in study.items()}
 
 
+def intermediate_payload(data: dict, operation: str) -> dict:
+    """Stateless paired-image API. No user images are stored by the server."""
+    if operation == "panorama":
+        first, second = decode_image(data["first"]), decode_image(data["second"])
+        result = stitch_pair(first, second)
+        return {"image": encode_image(result.image), "preview": encode_image(result.matches),
+                "overlap": encode_image(result.overlap), "metrics": result.stats,
+                "homography": result.homography.tolist()}
+    if operation == "flow":
+        first, second = decode_image(data["first"]), decode_image(data["second"])
+        result = sparse_lk(first, second)
+        return {"image": encode_image(result.annotated), "metrics": result.stats}
+    raise ValueError("Unknown intermediate operation")
+
+
 class LabHandler(BaseHTTPRequestHandler):
     def _json(self, status: int, data: dict | list) -> None:
         content = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -92,11 +110,22 @@ class LabHandler(BaseHTTPRequestHandler):
             return self._json(200, get_curriculum())
         if path == "/api/studies":
             return self._json(200, STUDIES)
+        if path == "/api/intermediate/sample":
+            p1, p2 = synthetic_panorama_pair()
+            f1, f2 = synthetic_translation()
+            return self._json(200, {"panorama": [encode_image(p1), encode_image(p2)],
+                                    "flow": [encode_image(f1), encode_image(f2)]})
+        if path == "/api/intermediate/tracking-demo":
+            frames, events = track_synthetic(8)
+            return self._json(200, {"frames": [encode_image(f) for f in frames],
+                                    "events": events,
+                                    "note": "Known-box synthetic association demo, not MOG2 detections"})
         if path == "/api/sample":
             return self._json(200, {"image": encode_image(make_sample())})
         static_files = {"/": ("index.html", "text/html; charset=utf-8"),
                         "/style.css": ("style.css", "text/css; charset=utf-8"),
-                        "/app.js": ("app.js", "text/javascript; charset=utf-8")}
+                        "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                        "/intermediate.js": ("intermediate.js", "text/javascript; charset=utf-8")}
         if path not in static_files:
             return self._json(404, {"error": "Not found"})
         filename, mime = static_files[path]
@@ -110,7 +139,8 @@ class LabHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlsplit(self.path).path
-        if path not in ("/api/process", "/api/ablate"):
+        if path not in ("/api/process", "/api/ablate",
+                        "/api/intermediate/panorama", "/api/intermediate/flow"):
             return self._json(404, {"error": "Not found"})
         try:
             length = int(self.headers.get("Content-Length", "-1"))
@@ -121,7 +151,12 @@ class LabHandler(BaseHTTPRequestHandler):
             request = json.loads(self.rfile.read(length))
             if not isinstance(request, dict):
                 raise TypeError("Expected a JSON object")
-            output = process_payload(request) if path == "/api/process" else ablation_payload(request)
+            if path == "/api/process":
+                output = process_payload(request)
+            elif path == "/api/ablate":
+                output = ablation_payload(request)
+            else:
+                output = intermediate_payload(request, path.rsplit("/", 1)[-1])
         except (ValueError, KeyError, TypeError, json.JSONDecodeError, OverflowError) as exc:
             return self._json(400, {"error": str(exc)[:300]})
         return self._json(200, output)

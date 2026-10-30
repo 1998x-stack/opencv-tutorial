@@ -1,4 +1,4 @@
-> **v0.2 in development** — actual processing-stage playback, NumPy references, deterministic parameter studies and reference-grounded quality metrics. This branch stacks on v0.1; the main branch may not contain the full lab until PR #1 is merged.
+> **v0.3 intermediate observatory** — adds reproducible ORB/RANSAC panorama stitching, sparse LK flow and deterministic centroid tracking on top of the v0.2 beginner lab. This stacked branch depends on the v0.2 PR.
 
 # Vision Lab · OpenCV from Scratch
 
@@ -86,3 +86,22 @@ Ablation JSON and PNG contact sheet use **one resized clean input and one determ
 Browser: click a stage, drag the step slider, or press Play for a sequence of *real computed images*. The stage list contains diagnostics that are separately labeled (e.g. mean-threshold reference is **not** a stage of the Gaussian adaptive threshold result).
 
 More information: [v0.2 experiment protocol](docs/v0.2-experiments.md).
+
+
+## v0.3: intermediate feature & motion observatory
+
+The intermediate lab introduces **real ORB/RANSAC panorama**, **pyramidal Lucas–Kanade flow**
+with forward/backward consistency, and a deterministic nearest-centroid tracker with identity
+lifecycle. Results include transparent intermediate imagery and inspectable metrics.
+
+```bash
+python -m opencv_tutorial evaluate-intermediate --output results/intermediate.json
+python -m opencv_tutorial serve   # visit /#intermediate
+python -m opencv_tutorial panorama --first a.png --second b.png --output pano.png
+python -m opencv_tutorial flow --first frame1.png --second frame2.png --output flow.png
+python -m opencv_tutorial track --input clip.mp4 --output annotated.mp4
+```
+
+**Known limitations:** Two-image planar panorama, sparse (not dense) optical flow, centroid-only
+association vulnerable to crossing/occlusion; synthetic scores are sanity checks, not real-world
+benchmarks. See [v0.3 methodology](docs/v0.3-intermediate.md).
