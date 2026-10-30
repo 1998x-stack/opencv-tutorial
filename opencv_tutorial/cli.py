@@ -11,6 +11,10 @@ from .algorithms import make_sample
 from .curriculum import get_curriculum
 from .experiments import STUDIES, run_study
 from .geometry import detect_document, warp_document
+from .intermediate import benchmark_synthetic
+from .optical_flow import sparse_lk
+from .panorama import stitch_pair
+from .tracking import CentroidTracker
 from .motion import MotionDetector
 from .pipeline import ALGORITHMS, run_pipeline
 from .server import serve
@@ -48,6 +52,20 @@ def main(argv: list[str] | None = None) -> int:
     p_study.add_argument("--strength", type=float, default=18)
     p_study.add_argument("--seed", type=int, default=7)
     p_study.add_argument("--output", type=Path, required=True)
+    p_pan = sub.add_parser("panorama", help="ORB/RANSAC panorama from two overlapping photos")
+    p_pan.add_argument("--first", type=Path, required=True)
+    p_pan.add_argument("--second", type=Path, required=True)
+    p_pan.add_argument("--output", type=Path, required=True)
+    p_flow = sub.add_parser("flow", help="Sparse pyramidal LK on two consecutive frames")
+    p_flow.add_argument("--first", type=Path, required=True)
+    p_flow.add_argument("--second", type=Path, required=True)
+    p_flow.add_argument("--output", type=Path, required=True)
+    p_track = sub.add_parser("track", help="MOG2 + centroid association over local video")
+    p_track.add_argument("--input", type=Path, required=True)
+    p_track.add_argument("--output", type=Path, required=True)
+    p_eval = sub.add_parser("evaluate-intermediate", help="Synthetic geometric sanity checks")
+    p_eval.add_argument("--seed", type=int, default=17)
+    p_eval.add_argument("--output", type=Path)
     sub.add_parser("course", help="Print the 24-week curriculum as JSON")
     args = parser.parse_args(argv)
     if args.command == "serve":
@@ -82,6 +100,62 @@ def main(argv: list[str] | None = None) -> int:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(content, encoding="utf-8")
         print(content)
+        return 0
+    if args.command == "evaluate-intermediate":
+        result = benchmark_synthetic(seed=args.seed)
+        report = json.dumps(result, indent=2, allow_nan=False)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(report, encoding="utf-8")
+        print(report)
+        return 0
+    if args.command in ("panorama", "flow"):
+        first, second = cv2.imread(str(args.first)), cv2.imread(str(args.second))
+        if first is None or second is None:
+            raise FileNotFoundError("Cannot decode first or second image")
+        if args.command == "panorama":
+            result = stitch_pair(first, second)
+            output, report = result.image, result.stats
+        else:
+            result = sparse_lk(first, second)
+            output, report = result.annotated, result.stats
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        if not cv2.imwrite(str(args.output), output):
+            raise RuntimeError("Could not write output")
+        print(json.dumps(report, allow_nan=False))
+        return 0
+    if args.command == "track":
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        cap = cv2.VideoCapture(str(args.input))
+        if not cap.isOpened():
+            raise FileNotFoundError(f"Cannot open video {args.input}")
+        detector, tracker = MotionDetector(), CentroidTracker()
+        writer = None
+        count, max_tracks = 0, 0
+        try:
+            while True:
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                motion = detector.step(frame)
+                tracks = tracker.update(motion.boxes)
+                annotated = tracker.annotate(frame)
+                if writer is None:
+                    h, w = frame.shape[:2]
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    writer = cv2.VideoWriter(str(args.output),
+                        cv2.VideoWriter_fourcc(*"mp4v"), fps if fps > 0 else 25., (w, h))
+                    if not writer.isOpened():
+                        raise RuntimeError("Cannot initialize video output")
+                writer.write(annotated)
+                count += 1
+                max_tracks = max(max_tracks, len(tracks))
+        finally:
+            cap.release()
+            if writer is not None:
+                writer.release()
+        print(json.dumps({"frames": count, "max_active_tracks": max_tracks,
+                          "output": str(args.output)}))
         return 0
     if args.command == "ablate":
         image = cv2.imread(str(args.input))

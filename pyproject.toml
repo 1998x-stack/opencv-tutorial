@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencv-tutorial-lab"
-version = "0.2.0"
+version = "0.3.0"
 description = "From-first-principles computer vision lessons and interactive OpenCV laboratory"
 readme = "README.md"
 requires-python = ">=3.10"
