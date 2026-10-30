@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opencv-tutorial-lab"
+version = "0.1.0"
+description = "From-first-principles computer vision lessons and interactive OpenCV laboratory"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["opencv-python-headless>=4.8,<5", "numpy>=1.26,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+opencv-lab = "opencv_tutorial.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["opencv_tutorial*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
