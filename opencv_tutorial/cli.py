@@ -10,6 +10,7 @@ import numpy as np
 from .algorithms import make_sample
 from .curriculum import get_curriculum
 from .geometry import detect_document, warp_document
+from .experiments import STUDIES, run_study
 from .motion import MotionDetector
 from .pipeline import ALGORITHMS, run_pipeline
 from .server import serve
@@ -39,6 +40,14 @@ def main(argv: list[str] | None = None) -> int:
     p_motion = sub.add_parser("motion", help="Analyze a locally stored video")
     p_motion.add_argument("--input", type=Path, required=True)
     p_motion.add_argument("--output", type=Path, required=True)
+    p_study = sub.add_parser("ablate", help="Run a fixed-input reproducible parameter study")
+    p_study.add_argument("--input", type=Path, required=True)
+    p_study.add_argument("--algorithm", choices=sorted(STUDIES), default="gaussian")
+    p_study.add_argument("--study", choices=["kernel", "sigma", "threshold"], default="sigma")
+    p_study.add_argument("--noise", choices=["none", "gaussian", "salt_pepper"], default="gaussian")
+    p_study.add_argument("--strength", type=float, default=18)
+    p_study.add_argument("--seed", type=int, default=7)
+    p_study.add_argument("--output", type=Path, required=True)
     sub.add_parser("course", help="Print the 24-week curriculum as JSON")
     args = parser.parse_args(argv)
     if args.command == "serve":
@@ -73,6 +82,33 @@ def main(argv: list[str] | None = None) -> int:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(content, encoding="utf-8")
         print(content)
+        return 0
+    if args.command == "ablate":
+        image = cv2.imread(str(args.input))
+        if image is None:
+            raise FileNotFoundError(f"Cannot decode {args.input}")
+        study = run_study(image, args.algorithm, args.study, noise=args.noise,
+                          strength=args.strength, seed=args.seed)
+        # Never serialize full pixels to JSON. Save an inspectable contact sheet.
+        panels = [study["clean"], study["observed"]]
+        for row in study["candidates"]:
+            output = row["image"]
+            if output.ndim == 2:
+                output = cv2.cvtColor(output, cv2.COLOR_GRAY2BGR)
+            panels.append(output)
+        tiled = np.hstack(panels)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        contact_path = args.output.with_suffix(".png")
+        if not cv2.imwrite(str(contact_path), tiled):
+            raise RuntimeError("Cannot write ablation contact sheet")
+        report = {k: v for k, v in study.items()
+                  if k not in ("clean", "observed", "candidates")}
+        report["contact_sheet"] = str(contact_path)
+        report["panels"] = ["clean", "noisy"] + [str(r["value"]) for r in study["candidates"]]
+        report["candidates"] = [{k: v for k, v in row.items() if k != "image"}
+                                for row in study["candidates"]]
+        args.output.write_text(json.dumps(report, indent=2, allow_nan=False), encoding="utf-8")
+        print(json.dumps({"report": str(args.output), "contact_sheet": str(contact_path)}))
         return 0
     if args.command in ("process", "scan", "motion"):
         args.output.parent.mkdir(parents=True, exist_ok=True)

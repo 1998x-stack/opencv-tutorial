@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
-const state = { algorithm: 'gaussian', image: null, busy: false, sequence: 0 };
+const state = { algorithm: 'gaussian', image: null, busy: false, sequence: 0,
+  stages: [], stageIndex: 0, playTimer: null, studyToken: 0, studies: {} };
 const sequence = ['gaussian', 'median', 'sobel', 'canny', 'otsu', 'adaptive', 'morphology', 'contours'];
 
 async function getJSON(url) {
@@ -42,29 +43,120 @@ function renderAlgorithms(catalog) {
         element.setAttribute('aria-pressed', String(selected));
       });
       document.querySelector('.sidebar-counter').textContent = `${String(index + 1).padStart(2, '0')} / 08`;
-      runExperiment();
+      stopPlayback(); updateStudyOptions(); runExperiment();
     });
     root.appendChild(btn);
   });
 }
 
+const explanations = {
+  original: 'The unmodified 8-bit BGR source image.',
+  grayscale: 'Convert 3 BGR channels into a single luminance-like intensity channel.',
+  gaussian_smoothed: 'Convolve the input using normalized Gaussian weights; lower spatial frequencies remain.',
+  smoothed: 'Gaussian smoothing suppresses noise before Canny gradient analysis.',
+  horizontal_gradient: 'Sobel X: local horizontal intensity change.',
+  vertical_gradient: 'Sobel Y: local vertical intensity change.',
+  gradient_magnitude: 'Combine horizontal and vertical gradients into an edge-strength map.',
+  histogram_equalized: 'CDF histogram transform, visualized as a diagnostic (not an Otsu preprocessing step).',
+  binary: 'Threshold the grayscale source into foreground and background.',
+  opening: 'Erode then dilate, reducing small foreground noise.',
+  reference_rect_opening: 'Separate NumPy reference with a rectangular element (not the ellipse used by the output).',
+  reference_mean_threshold: 'Separate local mean threshold diagnostic (output uses Gaussian-weighted neighborhoods).',
+  result: 'Final result computed by the selected OpenCV algorithm.'
+};
+function stopPlayback() {
+  if (state.playTimer !== null) { clearInterval(state.playTimer); state.playTimer = null; }
+  $('playButton').textContent = '▶ Play'; $('playButton').setAttribute('aria-pressed', 'false');
+}
+function selectStage(index) {
+  if (!state.stages.length) return;
+  state.stageIndex = Math.max(0, Math.min(state.stages.length - 1, index));
+  const [key, image] = state.stages[state.stageIndex];
+  $('processedImage').src = image;
+  $('stageSlider').value = String(state.stageIndex);
+  $('playStageLabel').textContent = `${state.stageIndex + 1} / ${state.stages.length} · ${key.replaceAll('_',' ')}`;
+  $('stageExplanation').textContent = explanations[key] || `Actual intermediate result: ${key}.`;
+  document.querySelectorAll('.stage').forEach((el, i) => {
+    el.classList.toggle('selected-stage', i === state.stageIndex);
+    el.setAttribute('aria-pressed', String(i === state.stageIndex));
+  });
+}
 function renderStages(images) {
+  stopPlayback();
+  state.stages = Object.entries(images);
+  $('stageSlider').max = String(state.stages.length - 1);
   const root = $('stages'); root.replaceChildren();
   const entries = Object.entries(images);
   for (const [name, src] of entries) {
-    const item = document.createElement('div'); item.className = 'stage';
+    const item = document.createElement('button'); item.type = 'button'; item.className = 'stage';
     const image = document.createElement('img'); image.src = src; image.alt = `${name} processing stage`;
     const label = document.createElement('span'); label.textContent = name.replaceAll('_', ' ').toUpperCase();
     item.append(image, label); root.append(item);
-    item.addEventListener('click', () => { $('processedImage').src = src; });
-    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => { stopPlayback(); selectStage(state.stages.findIndex(pair => pair[0] === name)); });
   }
   $('stageCount').textContent = `${entries.length} STAGES · CLICK TO INSPECT`;
+  selectStage(entries.length - 1);
+}
+
+function updateStudyOptions() {
+  const supported = state.studies[state.algorithm] || {};
+  const select = $('studySelect'); select.replaceChildren();
+  for (const key of Object.keys(supported)) {
+    const option = document.createElement('option'); option.value = key; option.textContent = key;
+    select.append(option);
+  }
+  $('studyButton').disabled = !Object.keys(supported).length;
+  $('studyStatus').textContent = Object.keys(supported).length ?
+    'Four controlled parameter variants; all reuse one noisy image.' :
+    'This algorithm has no supported parameter sweep in v0.2.';
+  $('studyResults').replaceChildren();
+}
+async function runAblation() {
+  if (!state.image || $('studyButton').disabled) return;
+  const token = ++state.studyToken;
+  $('studyButton').disabled = true;
+  $('studyStatus').textContent = 'Evaluating controlled variants…';
+  try {
+    const response = await fetch('/api/ablate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({image: state.image, ...params(), study: $('studySelect').value,
+        noise: $('noiseSelect').value, strength: Number($('noiseStrength').value), seed: 7})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    if (token !== state.studyToken) return;
+    const root = $('studyResults'); root.replaceChildren();
+    for (const candidate of data.candidates) {
+      const article = document.createElement('article'); article.className = 'candidate';
+      const image = document.createElement('img'); image.src = candidate.image;
+      image.alt = `${data.study} value ${candidate.value}`;
+      const title = document.createElement('strong'); title.textContent = `${data.study} = ${candidate.value}`;
+      const details = document.createElement('span');
+      const quality = candidate.quality;
+      details.textContent = quality.quality_available ?
+        `PSNR ${quality.after.psnr_db ?? '∞'} dB · SSIM ${quality.after.ssim}` :
+        'No reference quality score for this operation';
+      article.append(image, title, details); root.append(article);
+    }
+    const first = data.candidates[0].quality;
+    $('studyStatus').textContent = `${data.study_resolution.join('×')} px · ${data.noise} noise` +
+      (first.quality_available ? ` · Noisy baseline PSNR ${first.before.psnr_db} dB` :
+        ' · Quality unavailable without a meaningful ground truth') +
+      ' · Runtime is not a benchmark.';
+  } catch (error) {
+    if (token === state.studyToken) $('studyStatus').textContent = `Ablation failed: ${error.message}`;
+  } finally {
+    if (token === state.studyToken) updateStudyOptionsAfterRun();
+  }
+}
+function updateStudyOptionsAfterRun() {
+  $('studyButton').disabled = !Object.keys(state.studies[state.algorithm] || {}).length;
 }
 
 async function runExperiment() {
   if (!state.image) return;
   const thisRun = ++state.sequence;
+  stopPlayback(); state.studyToken++; updateStudyOptionsAfterRun();
   state.busy = true; $('runButton').disabled = true;
   setStatus(`Processing ${state.algorithm}…`);
   try {
@@ -126,6 +218,21 @@ async function init() {
   for (const id of ['kernel', 'sigma', 'threshold']) $(id).addEventListener('input', updateLabels);
   for (const id of ['kernel', 'sigma', 'threshold']) $(id).addEventListener('change', runExperiment);
   $('runButton').addEventListener('click', runExperiment);
+  $('playButton').addEventListener('click', () => {
+    if (state.playTimer !== null) { stopPlayback(); return; }
+    if (state.stages.length < 2) return;
+    if (state.stageIndex === state.stages.length - 1) selectStage(0);
+    $('playButton').textContent = 'Ⅱ Pause'; $('playButton').setAttribute('aria-pressed','true');
+    state.playTimer = setInterval(() => {
+      if (state.stageIndex >= state.stages.length - 1) { stopPlayback(); return; }
+      selectStage(state.stageIndex + 1);
+    }, 850);
+  });
+  $('prevButton').addEventListener('click', () => { stopPlayback(); selectStage(state.stageIndex - 1); });
+  $('nextButton').addEventListener('click', () => { stopPlayback(); selectStage(state.stageIndex + 1); });
+  $('stageSlider').addEventListener('input', event => { stopPlayback(); selectStage(Number(event.target.value)); });
+  $('noiseStrength').addEventListener('input', event => $('strengthValue').textContent = event.target.value);
+  $('studyButton').addEventListener('click', runAblation);
   $('sampleButton').addEventListener('click', useSample);
   $('compareSlider').addEventListener('input', event => {
     $('comparison').style.setProperty('--split', `${event.target.value}%`);
@@ -144,7 +251,8 @@ async function init() {
     renderCurriculum(window.courseWeeks || [], tab.dataset.level);
   }));
   try {
-    const [catalog, weeks] = await Promise.all([getJSON('/api/catalog'), getJSON('/api/curriculum')]);
+    const [catalog, weeks, studies] = await Promise.all([getJSON('/api/catalog'), getJSON('/api/curriculum'), getJSON('/api/studies')]);
+    state.studies = studies; updateStudyOptions();
     window.courseWeeks = weeks; renderAlgorithms(catalog); renderCurriculum(weeks, 'All');
     await useSample();
   } catch (error) { setStatus(`Laboratory initialization failed: ${error.message}`, true); }
