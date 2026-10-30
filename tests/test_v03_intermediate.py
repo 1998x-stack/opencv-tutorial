@@ -12,9 +12,13 @@ import cv2
 import numpy as np
 import pytest
 
-from opencv_tutorial.intermediate import (benchmark_synthetic, synthetic_panorama_pair,
-                                          synthetic_tracking_frames, synthetic_translation,
-                                          track_synthetic)
+from opencv_tutorial.intermediate import (
+    benchmark_synthetic,
+    synthetic_panorama_pair,
+    synthetic_tracking_frames,
+    synthetic_translation,
+    track_synthetic,
+)
 from opencv_tutorial.optical_flow import flow_endpoint_error, sparse_lk
 from opencv_tutorial.panorama import stitch_pair
 from opencv_tutorial.server import LabHandler, encode_image, intermediate_payload

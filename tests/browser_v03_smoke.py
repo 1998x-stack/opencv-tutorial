@@ -8,8 +8,8 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
-from urllib.request import Request, urlopen
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 from playwright.sync_api import sync_playwright
 
@@ -51,6 +51,8 @@ def main() -> None:
             html = html.replace('<script defer src="/app.js"></script>', '')
             html = html.replace('<script defer src="/intermediate.js"></script>', '')
             page.set_content(html)
+            page.add_style_tag(content=(Path(__file__).resolve().parents[1] /
+                                        "web/style.css").read_text())
             page.evaluate("""(() => { window.fetch = async (url, opts = {}) => {
                 const response = await window.bridgeFetch(url, opts);
                 return {ok: response.status >= 200 && response.status < 300,

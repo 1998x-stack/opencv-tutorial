@@ -12,12 +12,12 @@ from .curriculum import get_curriculum
 from .experiments import STUDIES, run_study
 from .geometry import detect_document, warp_document
 from .intermediate import benchmark_synthetic
+from .motion import MotionDetector
 from .optical_flow import sparse_lk
 from .panorama import stitch_pair
-from .tracking import CentroidTracker
-from .motion import MotionDetector
 from .pipeline import ALGORITHMS, run_pipeline
 from .server import serve
+from .tracking import CentroidTracker
 
 
 def main(argv: list[str] | None = None) -> int:

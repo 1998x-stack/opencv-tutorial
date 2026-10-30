@@ -46,8 +46,8 @@ def sparse_lk(first: np.ndarray, second: np.ndarray, *, max_corners: int = 300,
         return FlowResult(painted, empty, empty.copy(), np.empty(0),
                           {"detected": 0, "tracked": 0, "survival_ratio": 0.,
                            "median_dx": 0., "median_dy": 0., "median_fb_error": None})
-    lk = dict(winSize=(21, 21), maxLevel=3,
-              criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, .01))
+    lk = {"winSize": (21, 21), "maxLevel": 3,
+          "criteria": (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, .01)}
     next_pts, status_fw, _ = cv2.calcOpticalFlowPyrLK(gray_a, gray_b, points, None, **lk)
     if next_pts is None:
         good = np.zeros(len(points), dtype=bool)
@@ -75,7 +75,7 @@ def sparse_lk(first: np.ndarray, second: np.ndarray, *, max_corners: int = 300,
         cv2.arrowedLine(painted, pt1, pt2, (46, 232, 190), 1, tipLength=.35)
         cv2.circle(painted, pt2, 2, (30, 128, 255), -1)
     delta = dest - origin
-    stats = {"detected": int(len(points)), "tracked": int(len(origin)),
+    stats = {"detected": len(points), "tracked": len(origin),
              "survival_ratio": round(len(origin) / len(points), 4),
              "median_dx": round(float(np.median(delta[:, 0])), 3) if len(delta) else 0.,
              "median_dy": round(float(np.median(delta[:, 1])), 3) if len(delta) else 0.,
@@ -89,6 +89,6 @@ def flow_endpoint_error(result: FlowResult, dx: float, dy: float) -> dict:
         return {"valid": False, "count": 0, "mean_epe": None, "median_epe": None}
     diff = result.points_second - result.points_first - np.array([dx, dy])
     epe = np.linalg.norm(diff, axis=1)
-    return {"valid": True, "count": int(len(epe)),
+    return {"valid": True, "count": len(epe),
             "mean_epe": round(float(np.mean(epe)), 4),
             "median_epe": round(float(np.median(epe)), 4)}
