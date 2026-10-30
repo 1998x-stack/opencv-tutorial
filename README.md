@@ -1,4 +1,4 @@
-> **v0.3 intermediate observatory** — adds reproducible ORB/RANSAC panorama stitching, sparse LK flow and deterministic centroid tracking on top of the v0.2 beginner lab. This stacked branch depends on the v0.2 PR.
+> **v0.4 advanced geometry & inference observatory** — adds calibrated stereo-depth experiments, robust PnP, scale-ambiguous visual odometry, local OpenCV DNN inference and measured CPU latency on top of v0.3. Stacked PR dependencies remain v0.1 → v0.2 → v0.3 → v0.4.
 
 # Vision Lab · OpenCV from Scratch
 
@@ -88,7 +88,7 @@ Browser: click a stage, drag the step slider, or press Play for a sequence of *r
 More information: [v0.2 experiment protocol](docs/v0.2-experiments.md).
 
 
-## v0.3: intermediate feature & motion observatory
+## v0.4: intermediate feature & motion observatory
 
 The intermediate lab introduces **real ORB/RANSAC panorama**, **pyramidal Lucas–Kanade flow**
 with forward/backward consistency, and a deterministic nearest-centroid tracker with identity
@@ -104,4 +104,14 @@ python -m opencv_tutorial track --input clip.mp4 --output annotated.mp4
 
 **Known limitations:** Two-image planar panorama, sparse (not dense) optical flow, centroid-only
 association vulnerable to crossing/occlusion; synthetic scores are sanity checks, not real-world
-benchmarks. See [v0.3 methodology](docs/v0.3-intermediate.md).
+benchmarks. See [v0.4 methodology](docs/v0.4-intermediate.md).
+
+
+## v0.4 · Advanced geometry and inference
+
+- Calibrated/rectified StereoSGBM with disparity invalid-mask and metric depth only under explicit calibration assumptions.
+- Robust PnP (RANSAC + LM) and relative Essential/recoverPose VO (unknown translation scale).
+- Offline dependency-free ONNX sanity model with OpenCV DNN CPU inference, local SHA256 checks, and warmup/median/p95 timing.
+- Browser advanced lab for stereo and synthetic geometry; stateless API and independent CLI evaluations.
+
+See [`docs/v0.4-advanced.md`](docs/v0.4-advanced.md) for commands, assumptions, known gaps, and reproducibility notes.

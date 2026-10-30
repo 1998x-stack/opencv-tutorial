@@ -9,11 +9,12 @@
   <link rel="stylesheet" href="/style.css">
   <script defer src="/app.js"></script>
   <script defer src="/intermediate.js"></script>
+  <script defer src="/advanced.js"></script>
 </head>
 <body>
   <header class="site-nav">
-    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.3</span></a>
-    <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#intermediate">Motion Lab</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
+    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.4</span></a>
+    <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#intermediate">Motion Lab</a><a href="#advanced">3D Lab</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
     <a class="nav-github" href="https://github.com/1998x-stack/opencv-tutorial" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
   </header>
   <main id="top">
@@ -106,6 +107,32 @@
         <img id="trackingImage" alt="Synthetic tracking sequence" class="tracking-output">
         <div class="playback-row"><label for="trackingFrame" id="trackingLabel">Frame —</label><input id="trackingFrame" type="range" min="0" max="7" value="0"></div>
         <pre id="trackingEvents" class="intermediate-metrics">No tracks yet.</pre>
+      </div>
+    </section>
+    <section id="advanced" class="intermediate-section page-width">
+      <div class="section-heading"><div><div class="kicker">03 / ADVANCED VISION LAB</div><h2>Recover depth &amp; pose<span class="accent-dot">.</span></h2>
+      <p>Actual StereoSGBM and calibrated geometry. Explicit assumptions, synthetic ground truth, no invented metric scale.</p></div></div>
+      <div class="intermediate-panel">
+        <div class="intermediate-toolbar">
+          <label for="advancedMode">Experiment</label><select id="advancedMode"><option value="stereo">Rectified SGBM stereo</option><option value="vo">Two-view monocular motion</option></select>
+          <label for="advancedFx">Focal length (px)</label><input id="advancedFx" type="number" min="1" step="1" value="420" class="numeric-input">
+          <label for="advancedBaseline">Baseline (meters)</label><input id="advancedBaseline" type="number" min="0.001" step="0.01" value="0.12" class="numeric-input">
+          <button id="advancedReset" type="button" class="quiet-btn">Restore sample</button><button id="advancedRun" type="button" class="primary-btn">Compute stereo depth →</button>
+        </div>
+        <p id="advancedExpected" class="explainer">Valid depth requires calibrated rectified stereo views.</p>
+        <div class="pair-grid">
+          <figure><img id="advancedLeft" alt="Left stereo view"><figcaption>LEFT / FIRST <label class="quiet-btn">Upload left<input type="file" id="advancedUploadLeft" accept="image/*" hidden></label></figcaption></figure>
+          <figure><img id="advancedRight" alt="Right stereo view"><figcaption>RIGHT / SECOND <label class="quiet-btn">Upload right<input type="file" id="advancedUploadRight" accept="image/*" hidden></label></figcaption></figure>
+        </div>
+        <p id="advancedStatus" class="explainer" role="status" aria-live="polite">Loading calibrated fixture…</p>
+        <div class="pair-grid"><figure><img id="advancedOutput" alt="Computed disparity or motion visualization"><figcaption>COMPUTED RESULT</figcaption></figure>
+          <pre id="advancedMetrics" class="intermediate-metrics">Awaiting computation</pre></div>
+      </div>
+      <div class="intermediate-panel">
+        <div class="intermediate-toolbar"><strong>PnP &amp; relative visual odometry: synthetic geometry</strong><button id="geometryLoad" type="button" class="primary-btn">Run geometry evaluation →</button></div>
+        <p class="explainer">PnP gets metric pose only from known 3D units. Essential-matrix VO provides translation direction, not absolute distance.</p>
+        <div class="pair-grid"><figure><img id="geometryOutput" alt="2D synthetic projections and PnP frame axes"><figcaption>SYNTHETIC CORRESPONDENCES</figcaption></figure>
+        <pre id="geometryMetrics" class="intermediate-metrics">Press Run to inspect independent known-pose errors.</pre></div>
       </div>
     </section>
     <section id="curriculum" class="curriculum-section page-width"><div class="section-heading"><div><div class="kicker">02 / LEARNING PATH</div><h2>24 weeks. One foundation<span class="accent-dot">.</span></h2><p>Progress from pixels to multiview geometry and production-ready vision systems.</p></div></div><div class="tab-row" role="group" aria-label="Curriculum level"><button data-level="All" class="tab active">All modules</button><button data-level="Beginner" class="tab">01 / Beginner</button><button data-level="Intermediate" class="tab">02 / Intermediate</button><button data-level="Advanced" class="tab">03 / Advanced</button></div><div id="weekGrid" class="week-grid"></div></section>

@@ -50,3 +50,16 @@
 - [ ] Isolated job runner for externally accessible hosting
 
 Definition of done for **each** lesson: theory, code, deterministic example, alternative parameter cases, negative cases, tests, benchmark, and an explainable visualization. No unimplemented exercise should be labeled complete.
+
+
+## v0.4 incremental achievement (synthetic foundation, NOT completed high-order production vision)
+
+- [x] StereoSGBM depth conversion from **assumed rectified and calibrated** pair; invalid disparity masks.
+- [x] PnP RANSAC + LM known-pose benchmarks and relative essential/recoverPose geometry.
+- [x] Two-view LK-based relative motion function, synthetic VO trajectory with explicitly unknown scale.
+- [x] Offline OpenCV DNN ONNX test fixture and CPU performance warmup/repeated latency probes; CUDA backend guarded.
+- [x] Advanced browser lab, CLI, HTTP endpoint, and numerical/negative tests.
+- [ ] True stereo calibration and rectification, external disparity/depth dataset scores.
+- [ ] Long-sequence VO tracking, triangulation, BA, drift metrics, and absolute scale recovery.
+- [ ] Trained object detection models and numeric cross-framework verification.
+- [ ] Actual GPU speed benchmarks and CPU C++ native parity.

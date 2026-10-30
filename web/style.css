@@ -36,3 +36,12 @@
 .tracking-output{display:block;max-width:100%;width:720px;aspect-ratio:16/9;object-fit:contain;background:#0b1424;border-radius:9px;margin:0 auto 15px}
 .tracking-panel .playback-row input{accent-color:#58e2d1}
 @media(max-width:660px){.intermediate-panel{padding:12px}.pair-grid{grid-template-columns:1fr}.intermediate-toolbar select{min-width:130px}}
+
+/* v0.4 calibrated geometry panel: keep inputs legible at narrow widths */
+.numeric-input { width: 90px; max-width: 100%; border: 1px solid #46516a; border-radius: 8px; background: #101827; color: #f4f6ff; padding: 8px; }
+#advanced .pair-grid { margin: 16px 0; }
+#advanced .intermediate-metrics { overflow: auto; max-height: 380px; min-width: 0; }
+#advanced .intermediate-toolbar { flex-wrap: wrap; gap: 9px; }
+#advanced figure img { object-fit: contain; width: 100%; }
+
+#advanced figure img:not([src]) { visibility: hidden; }
