@@ -3,8 +3,13 @@ import numpy as np
 import pytest
 
 from opencv_tutorial.algorithms import (
-    binary_threshold, correlate2d, gaussian_kernel, gaussian_manual,
-    make_sample, otsu_manual, sobel_manual,
+    binary_threshold,
+    correlate2d,
+    gaussian_kernel,
+    gaussian_manual,
+    make_sample,
+    otsu_manual,
+    sobel_manual,
 )
 from opencv_tutorial.geometry import detect_document, order_corners, warp_document
 from opencv_tutorial.pipeline import ALGORITHMS, run_pipeline

@@ -25,7 +25,7 @@ def test_image_roundtrip_and_api_payload():
     encoded = encode_image(original)
     np.testing.assert_array_equal(decode_image(encoded), original)
     result = process_payload({"image": encoded, "algorithm": "sobel", "kernel": 5})
-    assert set(["original", "grayscale", "result"]).issubset(result["images"])
+    assert {"original", "grayscale", "result"}.issubset(result["images"])
     assert result["metrics"]["width"] == 160
     with pytest.raises(ValueError):
         decode_image("data:image/png;base64,not-valid")

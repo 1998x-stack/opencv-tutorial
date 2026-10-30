@@ -102,7 +102,7 @@ class LabHandler(BaseHTTPRequestHandler):
                 return self._json(415, {"error": "Expected application/json"})
             request = json.loads(self.rfile.read(length))
             if not isinstance(request, dict):
-                raise ValueError("Expected a JSON object")
+                raise TypeError("Expected a JSON object")
             output = process_payload(request)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError, OverflowError) as exc:
             return self._json(400, {"error": str(exc)[:300]})

@@ -23,8 +23,8 @@ def order_corners(points: np.ndarray) -> np.ndarray:
 def warp_document(image: np.ndarray, corners: np.ndarray) -> np.ndarray:
     pts = order_corners(corners)
     tl, tr, br, bl = pts
-    width = max(1, int(round(max(np.linalg.norm(br - bl), np.linalg.norm(tr - tl)))))
-    height = max(1, int(round(max(np.linalg.norm(tr - br), np.linalg.norm(tl - bl)))))
+    width = max(1, round(max(np.linalg.norm(br - bl), np.linalg.norm(tr - tl))))
+    height = max(1, round(max(np.linalg.norm(tr - br), np.linalg.norm(tl - bl))))
     if width * height > 12_000_000:
         raise ValueError("Warped document exceeds pixel limit")
     destination = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
