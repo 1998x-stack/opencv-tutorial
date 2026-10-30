@@ -3,11 +3,14 @@ import cv2
 import numpy as np
 import pytest
 
-from opencv_tutorial.references import (
-    adaptive_mean_manual, equalize_hist_manual, histogram_manual,
-    median_manual, morphology_manual,
-)
 from opencv_tutorial.evaluation import compare_images, mask_scores, psnr, ssim
+from opencv_tutorial.references import (
+    adaptive_mean_manual,
+    equalize_hist_manual,
+    histogram_manual,
+    median_manual,
+    morphology_manual,
+)
 
 
 def test_median_opencv_parity_including_boundaries():

@@ -9,8 +9,8 @@ import numpy as np
 
 from .algorithms import make_sample
 from .curriculum import get_curriculum
-from .geometry import detect_document, warp_document
 from .experiments import STUDIES, run_study
+from .geometry import detect_document, warp_document
 from .motion import MotionDetector
 from .pipeline import ALGORITHMS, run_pipeline
 from .server import serve

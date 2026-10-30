@@ -8,8 +8,7 @@ import cv2
 import numpy as np
 
 from .algorithms import binary_threshold, gaussian_manual, otsu_manual, sobel_manual
-from .references import (adaptive_mean_manual, equalize_hist_manual,
-                         median_manual, morphology_manual)
+from .references import adaptive_mean_manual, equalize_hist_manual, median_manual, morphology_manual
 
 ALGORITHMS = {
     "gaussian": {"title": "Gaussian blur", "group": "Filtering", "description": "Spatial smoothing with Gaussian weights"},
