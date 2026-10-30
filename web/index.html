@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="Learn computer vision from pixels to production with interactive experiments and reproducible OpenCV code.">
+  <title>Vision Lab — OpenCV from Scratch</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="site-nav">
+    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.1</span></a>
+    <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
+    <a class="nav-github" href="https://github.com/1998x-stack/opencv-tutorial" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="top">
+    <section class="hero page-width">
+      <div class="eyebrow"><span class="pulse"></span> OPEN SOURCE · INTERACTIVE COMPUTER VISION</div>
+      <h1>See how images<br><span class="gradient-text">become understanding.</span></h1>
+      <p class="hero-sub">A hands-on journey from the first pixel to computer vision systems. Explore each algorithm, tune every parameter, and see the mathematics come alive.</p>
+      <div class="hero-actions"><a class="primary-btn" href="#lab">Enter the laboratory <span>↗</span></a><a href="#curriculum" class="text-btn">Explore 24 weeks <span>→</span></a></div>
+      <div class="hero-meta"><span><b>24</b> structured lessons</span><i></i><span><b>08</b> core algorithms</span><i></i><span><b>100%</b> offline ready</span></div>
+      <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+    </section>
+    <section id="lab" class="lab-section page-width">
+      <div class="section-heading"><div><div class="kicker">01 / EXPERIMENT</div><h2>The laboratory<span class="accent-dot">.</span></h2><p>Go from theory to pixels in seconds. Every stage is inspectable.</p></div><span class="live-indicator"><span class="live-dot"></span> LIVE ENGINE</span></div>
+      <div class="lab-shell">
+        <aside class="lab-sidebar">
+          <div class="sidebar-top"><span class="mini-label">ALGORITHM SELECTOR</span><span class="sidebar-counter">01 / 08</span></div>
+          <div id="algorithmList" class="algorithm-list" role="group" aria-label="Choose algorithm"></div>
+          <div class="control-panel">
+            <div class="mini-label">PARAMETERS <span class="param-info">REAL-TIME CONTROLS</span></div>
+            <label for="kernel">Kernel size <output id="kernelValue">5 × 5</output></label>
+            <input id="kernel" type="range" min="3" max="31" value="5" step="2">
+            <label for="sigma">Sigma <output id="sigmaValue">1.2</output></label>
+            <input id="sigma" type="range" min="1" max="50" value="12" step="1">
+            <label for="threshold">Threshold <output id="thresholdValue">120</output></label>
+            <input id="threshold" type="range" min="0" max="255" value="120" step="1">
+            <button class="primary-btn run-btn" id="runButton">Run experiment <span aria-hidden="true">→</span></button>
+          </div>
+        </aside>
+        <div class="lab-main">
+          <div class="preview-toolbar"><span class="mini-label">VISUAL OUTPUT <span class="preview-tag">COMPARISON MODE</span></span><div class="toolbar-actions"><button id="sampleButton" class="quiet-btn">↺ Reset sample</button><label class="quiet-btn upload-btn">↑ Upload image <input type="file" id="upload" accept="image/png,image/jpeg,image/webp,image/bmp" hidden></label></div></div>
+          <div class="comparison" id="comparison" style="--split:50%">
+            <img id="processedImage" alt="Processed algorithm output">
+            <div class="original-layer" id="originalLayer"><img id="originalImage" alt="Original image"></div>
+            <div class="compare-divider" aria-hidden="true"><span class="compare-handle">‹ ›</span></div>
+            <input aria-label="Compare original and processed images" type="range" id="compareSlider" min="0" max="100" value="50">
+            <span class="image-tag tag-original">ORIGINAL</span><span class="image-tag tag-output">PROCESSED</span>
+            <div id="emptyState" class="empty-preview">Preparing sample image…</div>
+          </div>
+          <div class="status-row"><span id="status" role="status" aria-live="polite">Initializing laboratory…</span><span id="imageDimensions">—</span></div>
+          <div class="metrics-grid"><div class="metric"><span>EXECUTION TIME</span><strong id="executionTime">—</strong><small>milliseconds</small></div><div class="metric"><span>IMAGE RESOLUTION</span><strong id="resolution">—</strong><small>pixels</small></div><div class="metric"><span>REFERENCE CHECK</span><strong id="referenceMetric">—</strong><small id="referenceLabel">when available</small></div></div>
+          <div class="stages-header"><span class="mini-label">PIPELINE BREAKDOWN</span><span id="stageCount">0 STAGES</span></div>
+          <div class="stage-grid" id="stages" aria-label="Intermediate stages"></div>
+        </div>
+      </div>
+    </section>
+    <section id="curriculum" class="curriculum-section page-width"><div class="section-heading"><div><div class="kicker">02 / LEARNING PATH</div><h2>24 weeks. One foundation<span class="accent-dot">.</span></h2><p>Progress from pixels to multiview geometry and production-ready vision systems.</p></div></div><div class="tab-row" role="group" aria-label="Curriculum level"><button data-level="All" class="tab active">All modules</button><button data-level="Beginner" class="tab">01 / Beginner</button><button data-level="Intermediate" class="tab">02 / Intermediate</button><button data-level="Advanced" class="tab">03 / Advanced</button></div><div id="weekGrid" class="week-grid"></div></section>
+    <section id="method" class="method-section page-width"><div class="kicker">03 / METHODOLOGY</div><h2>Understand. Implement.<br><span class="gradient-text">Measure. Repeat.</span></h2><div class="method-grid"><article><span>01</span><h3>First principles</h3><p>Derive the algorithm, study its assumptions, and reproduce it in NumPy before using optimized routines.</p></article><article><span>02</span><h3>Visualize every step</h3><p>Expose grayscale, gradients, thresholds, and intermediate representations—not just a final prediction.</p></article><article><span>03</span><h3>Verify what you build</h3><p>Compare against OpenCV references, create regression tests, benchmark runtime and record failure cases.</p></article></div></section>
+  </main>
+  <footer class="footer page-width"><span>◉ VISIONLAB <span class="footer-muted">/ OpenCV from Scratch</span></span><span>Built for learning · 2026</span></footer>
+</body>
+</html>
