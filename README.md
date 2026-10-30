@@ -1,3 +1,5 @@
+> **v0.2 in development** — actual processing-stage playback, NumPy references, deterministic parameter studies and reference-grounded quality metrics. This branch stacks on v0.1; the main branch may not contain the full lab until PR #1 is merged.
+
 # Vision Lab · OpenCV from Scratch
 
 A **24-week**, three-level computer-vision curriculum supported by executable NumPy reference algorithms, OpenCV comparisons, a self-contained interactive browser laboratory, CLI projects, testing, and performance benchmarks.
@@ -69,3 +71,18 @@ This is for **local/offline learning**, not a hardened internet-facing upload se
 ## Original work and references
 
 Algorithm concepts follow classical computer vision texts and [OpenCV documentation](https://docs.opencv.org/4.x/). All source code and synthetic sample images in this repository are independently authored.
+
+## v0.2: First-principles experiments
+
+```bash
+python -m opencv_tutorial sample --output results/sample.png
+python -m opencv_tutorial ablate --input results/sample.png --algorithm gaussian \
+  --study sigma --noise gaussian --strength 18 --seed 7 --output results/gaussian.json
+python -m opencv_tutorial serve
+```
+
+Ablation JSON and PNG contact sheet use **one resized clean input and one deterministic noisy observation**, varying only the selected algorithm parameter. Denoising scores compare outputs with the clean grayscale image. No segmentation/edge quality scores are fabricated without ground-truth masks. Runtime from the study is **not** a benchmark; use `benchmark` for a timed comparison.
+
+Browser: click a stage, drag the step slider, or press Play for a sequence of *real computed images*. The stage list contains diagnostics that are separately labeled (e.g. mean-threshold reference is **not** a stage of the Gaussian adaptive threshold result).
+
+More information: [v0.2 experiment protocol](docs/v0.2-experiments.md).

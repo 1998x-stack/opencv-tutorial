@@ -11,7 +11,7 @@
 </head>
 <body>
   <header class="site-nav">
-    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.1</span></a>
+    <a href="#top" class="brand" aria-label="Vision Lab home"><span class="brand-mark">◉</span><span>VISION<span class="brand-light">LAB</span></span><span class="version">BETA 0.2</span></a>
     <nav aria-label="Primary navigation"><a href="#lab">Laboratory</a><a href="#curriculum">Curriculum</a><a href="#method">Method</a></nav>
     <a class="nav-github" href="https://github.com/1998x-stack/opencv-tutorial" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
   </header>
@@ -55,6 +55,28 @@
           <div class="metrics-grid"><div class="metric"><span>EXECUTION TIME</span><strong id="executionTime">—</strong><small>milliseconds</small></div><div class="metric"><span>IMAGE RESOLUTION</span><strong id="resolution">—</strong><small>pixels</small></div><div class="metric"><span>REFERENCE CHECK</span><strong id="referenceMetric">—</strong><small id="referenceLabel">when available</small></div></div>
           <div class="stages-header"><span class="mini-label">PIPELINE BREAKDOWN</span><span id="stageCount">0 STAGES</span></div>
           <div class="stage-grid" id="stages" aria-label="Intermediate stages"></div>
+          <section class="learning-panel" aria-label="Real stage playback">
+            <div class="stages-header"><span class="mini-label">STEP-BY-STEP PLAYBACK</span><span id="playStageLabel">—</span></div>
+            <div class="playback-row">
+              <button class="quiet-btn" id="playButton" type="button" aria-pressed="false">▶ Play</button>
+              <button class="quiet-btn" id="prevButton" type="button" aria-label="Previous stage">←</button>
+              <input id="stageSlider" type="range" min="0" max="0" value="0" aria-label="Inspect processing stages">
+              <button class="quiet-btn" id="nextButton" type="button" aria-label="Next stage">→</button>
+            </div>
+            <p id="stageExplanation" class="explainer">The selected stage is an actual intermediate image from the running algorithm.</p>
+          </section>
+          <section class="learning-panel" aria-label="Parameter ablation study">
+            <div class="stages-header"><span class="mini-label">CONTROLLED ABLATION</span><span>FIXED INPUT / FIXED SEED</span></div>
+            <p class="explainer">Vary one parameter at a time. For denoising, noisy inputs use the pristine image as the reference for PSNR and SSIM.</p>
+            <div class="study-controls">
+              <label for="studySelect">Vary</label><select id="studySelect" aria-label="Ablation parameter"></select>
+              <label for="noiseSelect">Noise</label><select id="noiseSelect"><option value="gaussian">Gaussian</option><option value="salt_pepper">Salt & pepper</option><option value="none">None</option></select>
+              <label for="noiseStrength">Strength <output id="strengthValue">18</output></label><input type="range" id="noiseStrength" min="0" max="40" step="1" value="18">
+              <button id="studyButton" type="button" class="primary-btn">Run ablation ↗</button>
+            </div>
+            <div id="studyStatus" role="status" aria-live="polite" class="explainer"></div>
+            <div class="study-results" id="studyResults" aria-label="Parameter study results"></div>
+          </section>
         </div>
       </div>
     </section>

@@ -14,6 +14,7 @@ import numpy as np
 
 from .algorithms import make_sample
 from .curriculum import get_curriculum
+from .experiments import STUDIES, run_study
 from .pipeline import ALGORITHMS, run_pipeline
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -56,6 +57,20 @@ def process_payload(data: dict) -> dict:
             "metrics": result.metrics}
 
 
+def ablation_payload(data: dict) -> dict:
+    image = decode_image(data["image"])
+    noise = data.get("noise", "gaussian")
+    study = run_study(image, algorithm=str(data.get("algorithm", "gaussian")),
+                      study=str(data.get("study", "sigma")), noise=noise,
+                      strength=float(data.get("strength", 18)), seed=data.get("seed", 7),
+                      kernel=int(data.get("kernel", 5)), sigma=float(data.get("sigma", 1.2)),
+                      threshold=int(data.get("threshold", 120)))
+    return {key: (encode_image(value) if isinstance(value, np.ndarray) else
+                  [{**row, "image": encode_image(row["image"])} for row in value]
+                  if key == "candidates" else value)
+            for key, value in study.items()}
+
+
 class LabHandler(BaseHTTPRequestHandler):
     def _json(self, status: int, data: dict | list) -> None:
         content = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -75,6 +90,8 @@ class LabHandler(BaseHTTPRequestHandler):
             return self._json(200, ALGORITHMS)
         if path == "/api/curriculum":
             return self._json(200, get_curriculum())
+        if path == "/api/studies":
+            return self._json(200, STUDIES)
         if path == "/api/sample":
             return self._json(200, {"image": encode_image(make_sample())})
         static_files = {"/": ("index.html", "text/html; charset=utf-8"),
@@ -92,7 +109,8 @@ class LabHandler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_POST(self) -> None:
-        if urlsplit(self.path).path != "/api/process":
+        path = urlsplit(self.path).path
+        if path not in ("/api/process", "/api/ablate"):
             return self._json(404, {"error": "Not found"})
         try:
             length = int(self.headers.get("Content-Length", "-1"))
@@ -103,7 +121,7 @@ class LabHandler(BaseHTTPRequestHandler):
             request = json.loads(self.rfile.read(length))
             if not isinstance(request, dict):
                 raise TypeError("Expected a JSON object")
-            output = process_payload(request)
+            output = process_payload(request) if path == "/api/process" else ablation_payload(request)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError, OverflowError) as exc:
             return self._json(400, {"error": str(exc)[:300]})
         return self._json(200, output)

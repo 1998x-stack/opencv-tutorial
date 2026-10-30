@@ -10,6 +10,16 @@
 - [x] MOG2 video foreground detection baseline
 - [x] Deterministic samples, regression tests and CI configuration
 
+## Stage 00.2 — Beginner methodology (v0.2)
+
+- [x] Pure NumPy median/morphology/adaptive mean/histogram equalization teaching references
+- [x] Stage-by-stage playback of actual intermediate images in the browser
+- [x] Fixed-input/fixed-seed parameter ablations with reviewable contact sheets
+- [x] MAE, PSNR, SSIM reference-based denoising scores, and IoU/Dice mask score utilities
+- [x] Numerical parity, boundary-condition, and HTTP integration tests
+- [ ] Complete all eight beginner notebooks (v0.3, substantial work remains)
+- [ ] Golden real-world document scanner dataset and independent grading
+
 ## Stage 01 — W01–W08 lesson depth
 
 - [ ] Eight lesson notebooks with derivations, graphical step-throughs and independent grading

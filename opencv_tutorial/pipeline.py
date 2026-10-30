@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from .algorithms import binary_threshold, gaussian_manual, otsu_manual, sobel_manual
+from .references import adaptive_mean_manual, equalize_hist_manual, median_manual, morphology_manual
 
 ALGORITHMS = {
     "gaussian": {"title": "Gaussian blur", "group": "Filtering", "description": "Spatial smoothing with Gaussian weights"},
@@ -54,16 +55,21 @@ def run_pipeline(
     metrics: dict[str, float | int | str] = {}
     if algorithm == "gaussian":
         image = cv2.GaussianBlur(gray, (kernel, kernel), sigma)
-        if gray.size <= 400_000:  # reference method deliberately expensive
+        stages["gaussian_smoothed"] = image
+        if gray.size <= 40_000 and kernel <= 9:  # bound reference cost
             reference = gaussian_manual(gray, kernel, sigma)
             metrics["reference_mae"] = round(float(np.mean(np.abs(image.astype(float) - reference))), 4)
     elif algorithm == "median":
         image = cv2.medianBlur(gray, kernel)
+        if gray.size <= 40_000 and kernel <= 9:
+            ref = median_manual(gray, kernel)
+            metrics["reference_pixel_difference"] = int(np.count_nonzero(image != ref))
     elif algorithm == "sobel":
         gx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
         magnitude = cv2.magnitude(gx, gy)
         image = cv2.convertScaleAbs(magnitude, alpha=255 / max(float(magnitude.max()), 1))
+        stages["gradient_magnitude"] = image
         stages["horizontal_gradient"] = cv2.convertScaleAbs(gx)
         stages["vertical_gradient"] = cv2.convertScaleAbs(gy)
         if gray.size <= 400_000:
@@ -72,6 +78,11 @@ def run_pipeline(
     elif algorithm == "canny":
         softened = cv2.GaussianBlur(gray, (kernel, kernel), sigma)
         stages["smoothed"] = softened
+        gx = cv2.Sobel(softened, cv2.CV_64F, 1, 0, ksize=3)
+        gy = cv2.Sobel(softened, cv2.CV_64F, 0, 1, ksize=3)
+        mag = np.hypot(gx, gy)
+        stages["gradient_magnitude"] = cv2.convertScaleAbs(
+            mag, alpha=255 / max(float(mag.max()), 1))
         image = cv2.Canny(softened, threshold, min(255, 2 * threshold))
     elif algorithm == "otsu":
         selected = otsu_manual(gray)
@@ -79,9 +90,12 @@ def run_pipeline(
         _, cv_output = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         metrics["reference_pixel_difference"] = int(np.count_nonzero(cv_output != image))
         metrics["selected_threshold"] = selected
+        stages["histogram_equalized"] = equalize_hist_manual(gray)
     elif algorithm == "adaptive":
         image = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                       cv2.THRESH_BINARY, kernel, 3)
+        if gray.size <= 40_000 and kernel <= 9:
+            stages["reference_mean_threshold"] = adaptive_mean_manual(gray, kernel, 3)
     elif algorithm == "morphology":
         binary = binary_threshold(gray, threshold)
         stages["binary"] = binary
@@ -89,6 +103,8 @@ def run_pipeline(
         opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, elem)
         image = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, elem)
         stages["opening"] = opened
+        if gray.size <= 40_000 and kernel <= 9:
+            stages["reference_rect_opening"] = morphology_manual(binary, kernel, "open")
     else:  # contours
         binary = binary_threshold(gray, threshold)
         stages["binary"] = binary
