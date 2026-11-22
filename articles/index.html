@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="从像素到理解：一个可复现的计算机视觉学习路径，逐段解释本仓库实现的经典算法。">
+<title>从像素到理解 · 计算机视觉的学习路径</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.3rem,5.2vw,3.9rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.08rem,2.1vw,1.3rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td{border-bottom:1px solid var(--border);text-align:left;padding:.6rem;vertical-align:top}th{color:var(--subtle);font-weight:600}
+.card-list{list-style:none;padding:0;margin:1.2rem 0}.card-list li{margin:0 0 .8rem;padding:.9rem 1.05rem;border:1px solid var(--border);border-radius:.7rem;background:white}.card-list a{font-weight:600;text-decoration:none}.card-list span{display:block;color:var(--subtle);font-size:.88rem;margin-top:.2rem}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>从像素到理解</strong><a href="#problem">01 · 问题</a><a href="#contract">02 · 机制</a><a href="#path">03 · 路径</a><a href="#inspect">04 · 观察</a><a href="#references">05 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">计算机视觉 · 学习路径</p>
+<h1>从像素到理解</h1>
+<p class="dek">一个 8 位整数矩阵，怎样一步步变成可以判断的“边缘”“前景”“文档边界”？本文给出这条路径的全景，并为每个阶段指向一篇可复现的深入文章。所有算法都以本仓库 <code>opencv_tutorial/</code> 中的 NumPy 参考实现为准。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么需要一条“路径”</h2>
+<p>初学者最常见的学习方式是把 OpenCV 的 API 当成工具箱：记住 <code>cv2.Canny</code>、<code>cv2.threshold</code>、<code>cv2.findContours</code> 的调用方式，却说不清它们各自的输入是什么、失败时会怎样。结果是当图像光照不均、噪声很大或目标尺度变化时，参数只能靠试。</p>
+<p>问题在于，这些函数并不是孤立的“魔法”，而是一条有方向的数据变换：一张 <em>BGR</em> 三通道 8 位图像先被压成单通道灰度，再依次经过滤波、求导、阈值、形态学与几何约束。<strong>每一段都只解决一个明确定义的问题</strong>，而它的输出正好是下一段的输入。理解这条链，比记住 8 个函数签名更能迁移。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-pipe-title fig-pipe-desc" viewBox="0 0 820 320" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-pipe-title">共享图像处理管线的数据流</title>
+<desc id="fig-pipe-desc">BGR 输入先转为灰度，再进入选定的单个算法；算法输出结果图、若干中间阶段图以及运行指标。</desc>
+<rect width="820" height="320" rx="16" fill="#f3f9f6"/>
+<g font-size="15" text-anchor="middle" fill="#203035">
+<rect x="24" y="120" width="140" height="76" rx="12" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="94" y="152">BGR 图像</text><text x="94" y="174" font-size="12" fill="#53676d">8-bit · H×W×3</text>
+<rect x="228" y="120" width="140" height="76" rx="12" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="298" y="152">灰度</text><text x="298" y="174" font-size="12" fill="#53676d">uint8 · H×W</text>
+<rect x="432" y="120" width="140" height="76" rx="12" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="502" y="152">单个算法</text><text x="502" y="174" font-size="12" fill="#53676d">滤波 / 求导 / 阈值 …</text>
+<rect x="648" y="60" width="150" height="60" rx="12" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="723" y="86">结果图</text><text x="723" y="104" font-size="12" fill="#53676d">result</text>
+<rect x="648" y="132" width="150" height="60" rx="12" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/>
+<text x="723" y="158">中间阶段</text><text x="723" y="176" font-size="12" fill="#53676d">stages</text>
+<rect x="648" y="204" width="150" height="60" rx="12" fill="#e9f2ff" stroke="#147f80" stroke-width="1.5"/>
+<text x="723" y="230">运行指标</text><text x="723" y="248" font-size="12" fill="#53676d">metrics</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#arrow)">
+<path d="M164 158 H222"/><path d="M368 158 H426"/><path d="M572 150 C610 150 610 92 642 92"/><path d="M572 158 H642"/><path d="M572 166 C610 166 610 232 642 232"/>
+</g>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+<text x="410" y="286" font-size="13" text-anchor="middle" fill="#53676d">同一份结果图，附带可检查的中间过程与可测量的运行指标</text>
+</svg>
+<figcaption>共享管线：输入是 BGR 三通道图像；<code>gray = cvtColor(BGR2GRAY)</code> 只做一次；随后只运行被选中的一个算法。算法同时返回结果图、被命名的中间阶段图（<code>stages</code>）和运行指标（<code>metrics</code>），使得“调参”可以被观察和度量，而不是盲试。实现见 <code>opencv_tutorial/pipeline.py</code> 的 <code>run_pipeline</code>。</figcaption>
+</figure>
+</section>
+
+<section id="contract" aria-labelledby="contract-h">
+<h2 id="contract-h">02 · 核心机制：一条共享执行契约</h2>
+<p>本仓库把 8 个经典算法放进同一个执行契约里（<code>opencv_tutorial/pipeline.py</code> 的 <code>run_pipeline</code>）。不论选哪个算法，入口都接收同一组参数 <code>algorithm / kernel / sigma / threshold</code>，出口都返回同一结构：结果图、<code>stages</code> 字典与 <code>metrics</code> 字典。这样 CLI、HTTP API 与基准测试可以共用同一段逻辑，也让“对比 OpenCV 参考实现”成为契约的一部分。</p>
+<table>
+<caption class="visually-hidden" style="position:absolute;left:-9999px">仓库实现的八个算法及其分组</caption>
+<thead><tr><th>算法键</th><th>名称</th><th>分组</th><th>做什么</th></tr></thead>
+<tbody>
+<tr><td><code>gaussian</code></td><td>Gaussian blur</td><td>Filtering</td><td>用高斯权重做空间平滑</td></tr>
+<tr><td><code>median</code></td><td>Median filter</td><td>Filtering</td><td>去除脉冲噪声并尽量保边</td></tr>
+<tr><td><code>sobel</code></td><td>Sobel gradient</td><td>Edges</td><td>方向性一阶导数</td></tr>
+<tr><td><code>canny</code></td><td>Canny edges</td><td>Edges</td><td>非极大抑制 + 双阈值滞后</td></tr>
+<tr><td><code>otsu</code></td><td>Otsu threshold</td><td>Segmentation</td><td>最大化类间方差的阈值选择</td></tr>
+<tr><td><code>adaptive</code></td><td>Adaptive threshold</td><td>Segmentation</td><td>用局部邻域决定阈值</td></tr>
+<tr><td><code>morphology</code></td><td>Morphology</td><td>Segmentation</td><td>先开运算后闭运算</td></tr>
+<tr><td><code>contours</code></td><td>Contours</td><td>Geometry</td><td>提取并描画连通边界</td></tr>
+</tbody>
+</table>
+<p>“灰度”这一步本身就是一个可以写下来的数学定义。OpenCV 的 <code>COLOR_BGR2GRAY</code> 对三通道按下式加权（线性、逐像素），这也是后续所有算法共享的输入约定：</p>
+<div class="math-equation" role="group" aria-label="灰度加权公式">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="灰度加权公式，可横向滚动">
+<math display="block" aria-label="灰度值 Y 等于 0.299 乘 R 加 0.587 乘 G 加 0.114 乘 B，结果四舍五入到 8 位">
+<mrow>
+<mi>Y</mi><mo>=</mo>
+<mrow><mo>round</mo><mo>(</mo><mn>0.299</mn><mi>R</mi><mo>+</mo><mn>0.587</mn><mi>G</mi><mo>+</mo><mn>0.114</mn><mi>B</mi><mo>)</mo></mrow>
+</mrow>
+</math>
+</div>
+</div>
+<p class="note">这里的三个系数是 ITU-R BT.601 亮度权重；它们出现在 <code>cv2.cvtColor(..., cv2.COLOR_BGR2GRAY)</code> 的实现中，属于 OpenCV 文档定义的行为。仓库不对灰度公式另做参考实现，而是直接调用 OpenCV，因此本文不给出“自研灰度”的性能结论。</p>
+</section>
+
+<section id="path" aria-labelledby="path-h">
+<h2 id="path-h">03 · 路径：按依赖顺序阅读</h2>
+<p>这条路径不是 API 清单，而是依赖顺序：每个阶段都假设上一阶段的输出已经成立。先看滤波，是因为噪声会污染后续每一次求导；先看求导，是因为阈值只有在“边缘已被增强”后才有意义。</p>
+<ul class="card-list">
+<li><a href="convolution.html">卷积与高斯滤波</a><span>相关与卷积的区别、<code>BORDER_REFLECT_101</code> 边界约定、可分离核与 O(N·k²) 代价。</span></li>
+<li><a href="gradients.html">梯度与边缘</a><span>Sobel 两个方向核、梯度幅值，以及 Canny 的非极大抑制与双阈值滞后。</span></li>
+<li><a href="thresholding.html">阈值分割</a><span>Otsu 的类间方差推导，以及自适应阈值为什么要用局部邻域。</span></li>
+<li><a href="morphology.html">形态学与轮廓</a><span>开运算去除小噪点、闭运算连接断裂，以及轮廓计数为什么依赖阈值。</span></li>
+<li><a href="local-features.html">局部特征与匹配</a><span>ORB 关键点、汉明距离、Lowe 比值检验与 RANSAC 单应估计。</span></li>
+<li><a href="motion.html">运动检测</a><span>MOG2 背景建模、0/127/255 掩码语义与阴影抑制。</span></li>
+</ul>
+</section>
+
+<section id="inspect" aria-labelledby="inspect-h">
+<h2 id="inspect-h">04 · 观察：让“调参”可被检查</h2>
+<p>把管线暴露成可点击的观察点，是这套教学法最关键的一步：读者不是看一张最终结果图，而是能在同一坐标系里切换“我此刻看的是哪一段”。下面三个按钮对应共享契约里的三个可见产物。</p>
+<div class="control-row" role="group" aria-label="选择要观察的管线产物">
+<button type="button" data-view="result" aria-pressed="false">查看 result</button>
+<button type="button" data-view="stages" aria-pressed="true">查看 stages</button>
+<button type="button" data-view="metrics" aria-pressed="false">查看 metrics</button>
+</div>
+<p class="status" id="inspect-status" aria-live="polite">当前查看：stages —— 被命名的中间阶段图，例如 “original”“grayscale” 与算法专有的中间产物。</p>
+<p>这三个产物回答的是不同问题：<code>result</code> 回答“最终长什么样”；<code>stages</code> 回答“中间发生了什么”；<code>metrics</code> 回答“和参考实现差多少、花了多久”。没有第三项，调参就无法被度量和复现。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">05 · 参考文献与实现出处</h2>
+<ul>
+<li>OpenCV 官方文档 4.x：颜色空间转换与各算法语义，<a href="https://docs.opencv.org/4.x/">https://docs.opencv.org/4.x/</a>。</li>
+<li>本仓库参考实现：<code>opencv_tutorial/pipeline.py</code>（共享执行契约）、<code>opencv_tutorial/algorithms.py</code>（NumPy 参考算法）、<code>opencv_tutorial/curriculum.py</code>（24 周教学大纲的唯一来源）。</li>
+<li>Otsu, N. (1979). <em>A Threshold Selection Method from Gray-Level Histograms.</em> IEEE Trans. Systems, Man, and Cybernetics 9(1):62–66. DOI: <a href="https://doi.org/10.1109/TSMC.1979.4310076">10.1109/TSMC.1979.4310076</a>。</li>
+</ul>
+<p class="note">文中出现的数值均来自本仓库代码或上述公开来源；没有出处的示意值会单独标注为“教学示意”。“24 周大纲”中标注 <code>planned</code> 的周次属于规划，不代表已完成。</p>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var texts = {
+    result: '当前查看：result —— 算法返回的最终图像，类型随算法而变：滤波结果是单通道图，contours 结果则是叠加了轮廓的原 BGR 图。',
+    stages: '当前查看：stages —— 被命名的中间阶段图，例如 “original”“grayscale” 与算法专有的中间产物。',
+    metrics: '当前查看：metrics —— 运行耗时、图像尺寸，以及与 OpenCV 参考实现的一致性（如高斯滤波的 reference_mae、Sobel 的 gradient_max_error、Otsu 的 reference_pixel_difference）。'
+  };
+  var status = document.getElementById('inspect-status');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      status.textContent = texts[btn.dataset.view] || '';
+    });
+  });
+})();
+</script>
+</body>
+</html>
