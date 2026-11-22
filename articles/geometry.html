@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="透视与文档矫正：为什么透视畸变无法由滤波修复，detect_document 如何保守地找到四个角，单应变换怎样把梯形映射回矩形，附本仓库参考实现。">
+<title>透视与文档矫正 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em;overflow-wrap:anywhere}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-size:.92rem;line-height:1.7}
+ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>透视与文档矫正</strong><a href="#problem">01 · 问题</a><a href="#detect">02 · 检测四个角</a><a href="#math">03 · 单应变换</a><a href="#order">04 · 排序与尺寸</a><a href="#explore">05 · 观察角点</a><a href="#limits">06 · 边界与取舍</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段四 · 几何</p>
+<h1>透视与文档矫正</h1>
+<p class="dek">斜着拍一张文档，得到的是一个梯形而不是矩形。这个畸变来自相机投影，<strong>任何逐像素滤波都无法还原它</strong>——你需要的是一次空间映射。本文说明 <code>detect_document</code> 如何保守地找到四个角，单应变换怎样把梯形拉回矩形，以及这套实现的取舍。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么滤波修不好透视畸变</h2>
+<p>前面的卷积、阈值、形态学都是<strong>局部</strong>操作：每个输出像素只由它附近的一小块输入决定。透视畸变却不是局部亮度问题，而是<strong>坐标被重新分配</strong>的问题——文档右上角被拍得近，像素密度高；左下角被拍得远，像素被压缩。要修正它，必须知道“源图的哪个点应该搬到目标图的哪个点”，这是一次全局的坐标变换，滤波器做不到。</p>
+<p>好在这类映射有很强的结构：平面物体在针孔相机下的投影，任意两个平面之间的对应关系都由一个 <strong>3×3 单应矩阵 <code>H</code></strong> 描述。只要能定位文档的四个角，就能反解 <code>H</code>，把梯形重采样成正视的矩形。这正是 <code>opencv_tutorial/geometry.py</code> 中 <code>detect_document</code> 与 <code>warp_document</code> 的组合。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-flow-title fig-flow-desc" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-flow-title">斜拍梯形文档经四个角与单应变换还原为矩形</title>
+<desc id="fig-flow-desc">左侧是透视畸变的梯形文档；中间定位四个角；右侧经单应变换重采样成正视矩形。</desc>
+<rect width="720" height="300" rx="16" fill="#f3f9f6"/>
+<g font-size="13" text-anchor="middle" fill="#203035">
+<polygon points="70,220 210,205 190,70 95,95" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.8"/>
+<text x="140" y="262" fill="#53676d">斜拍：梯形</text>
+<g fill="#d06d4d"><circle cx="70" cy="220" r="5"/><circle cx="210" cy="205" r="5"/><circle cx="190" cy="70" r="5"/><circle cx="95" cy="95" r="5"/></g>
+<text x="360" y="150">H</text><text x="360" y="170" font-size="11" fill="#53676d">3×3</text>
+<rect x="455" y="80" width="150" height="110" fill="#d6f1eb" stroke="#147f80" stroke-width="1.8"/>
+<text x="530" y="262" fill="#53676d">矫正：rectangle</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#ag)">
+<path d="M232 150 H345"/><path d="M378 150 H447"/>
+</g>
+<defs><marker id="ag" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>透视畸变是坐标层面的形变，不是亮度层面的噪声，因此要用<strong>几何变换</strong>而非滤波修复：先定位源图中文档四角（左），再由单应矩阵 <code>H</code> 把它们映射到目标矩形的四角（右），最后对整幅图做重采样。实现见 <code>geometry.py</code> 的 <code>detect_document</code> → <code>warp_document</code>。</figcaption>
+</figure>
+</section>
+
+<section id="detect" aria-labelledby="detect-h">
+<h2 id="detect-h">02 · 检测四个角：保守而克制的假设</h2>
+<p><code>detect_document</code> 不去“理解”文档内容，它只找<strong>四条边围成的凸四边形</strong>。步骤逐条对应实现：</p>
+<ul class="plain">
+<li><strong>转灰度 + 高斯模糊</strong>：<code>cv2.cvtColor(...BGR2GRAY)</code> 后 <code>GaussianBlur(gray, (5,5), 0)</code>。模糊是为了压掉纸张纹理与噪声，避免边缘破碎。</li>
+<li><strong>Canny 取边缘</strong>：<code>cv2.Canny(blur, 45, 140)</code>。低阈值 45、高阈值 140 是<strong>经验常量</strong>，对高对比度文档有效，对低对比度场景需要重调。</li>
+<li><strong>找轮廓并按面积排序</strong>：<code>findContours(..., RETR_LIST, CHAIN_APPROX_SIMPLE)</code>，再按 <code>contourArea</code> 从大到小遍历。面积下限为整图面积的 <code>8%</code>（<code>area_min = H·W·0.08</code>），一旦小于它就跳出——因为文档应是画面中显著的大目标。</li>
+<li><strong>多边形近似 + 凸性检查</strong>：<code>approxPolyDP(contour, 0.02·perimeter, True)</code> 把轮廓简化，只有当结果<em>恰好</em>有 <code>4</code> 个顶点且 <code>isContourConvex</code> 为真时才接受，随后交给 <code>order_corners</code> 定序。</li>
+<li><strong>找不到就返回 <code>None</code></strong>：CLI 的 <code>scan</code> 子命令据此抛出 <code>No quadrilateral document found</code>，而不是硬凑一个结果。</li>
+</ul>
+<figure>
+<svg role="img" aria-labelledby="fig-detect-title fig-detect-desc" viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-detect-title">detect_document 的处理阶段</title>
+<desc id="fig-detect-desc">灰度、高斯模糊、Canny 边缘、轮廓面积过滤、多边形近似与凸性检查，最终输出四个角点或 None。</desc>
+<rect width="560" height="300" rx="16" fill="#f3f9f6"/>
+<g font-size="12.5" text-anchor="middle" fill="#203035">
+<rect x="20" y="122" width="96" height="56" rx="9" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/><text x="68" y="147">灰度</text><text x="68" y="164" font-size="11" fill="#53676d">BGR2GRAY</text>
+<rect x="134" y="122" width="96" height="56" rx="9" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="182" y="147">模糊 5×5</text><text x="182" y="164" font-size="11" fill="#53676d">GaussianBlur</text>
+<rect x="248" y="122" width="96" height="56" rx="9" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="296" y="147">Canny</text><text x="296" y="164" font-size="11" fill="#53676d">45 / 140</text>
+<rect x="362" y="122" width="96" height="56" rx="9" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/><text x="410" y="141">轮廓</text><text x="410" y="158" font-size="11" fill="#53676d">面积 ≥ 8%</text>
+<rect x="476" y="122" width="66" height="56" rx="9" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/><text x="509" y="141">四角</text><text x="509" y="158" font-size="11" fill="#53676d">+ 凸</text>
+</g>
+<g stroke="#147f80" stroke-width="3.5" fill="none" marker-end="url(#ad)">
+<path d="M116 150 H130"/><path d="M230 150 H244"/><path d="M344 150 H358"/><path d="M458 150 H472"/>
+</g>
+<defs><marker id="ad" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>检测阶段：灰度 → 模糊 → Canny 边缘 → 按面积过滤轮廓 → 多边形近似并要求恰好 4 个凸顶点。共享管线中前几步与 <code>gradients</code> 文章的 Canny 分支一致，差别在于这里的目标是<em>外轮廓的几何形状</em>而非像素级边缘图。阈值 45/140、面积下限 8%、近似精度 0.02 都直接来自 <code>geometry.py</code>。</figcaption>
+</figure>
+</section>
+
+<section id="math" aria-labelledby="math-h">
+<h2 id="math-h">03 · 单应变换：四个点解出八自由度</h2>
+<p>用齐次坐标表示平面上的点 <code>(x, y) → (x, y, 1)</code>，单应矩阵 <code>H</code> 把源点映射到目标点：</p>
+<div class="math-equation" role="group" aria-label="单应变换的齐次坐标形式">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="单应变换公式，可横向滚动">
+<math display="block" aria-label="目标点齐次坐标等于 3 乘 3 的矩阵 H 乘以源点齐次坐标">
+<mrow>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><msup><mi>x</mi><mo>′</mo></msup></mtd></mtr>
+<mtr><mtd><msup><mi>y</mi><mo>′</mo></msup></mtd></mtr>
+<mtr><mtd><msup><mi>w</mi><mo>′</mo></msup></mtd></mtr>
+</mtable></mfenced>
+<mo>=</mo>
+<mi>H</mi>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><mi>x</mi></mtd></mtr>
+<mtr><mtd><mi>y</mi></mtd></mtr>
+<mtr><mtd><mn>1</mn></mtd></mtr>
+</mtable></mfenced>
+<mo>,</mo><mspace width="1em"></mspace>
+<mi>H</mi><mo>=</mo>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><msub><mi>h</mi><mn>11</mn></msub></mtd><mtd><msub><mi>h</mi><mn>12</mn></msub></mtd><mtd><msub><mi>h</mi><mn>13</mn></msub></mtd></mtr>
+<mtr><mtd><msub><mi>h</mi><mn>21</mn></msub></mtd><mtd><msub><mi>h</mi><mn>22</mn></msub></mtd><mtd><msub><mi>h</mi><mn>23</mn></msub></mtd></mtr>
+<mtr><mtd><msub><mi>h</mi><mn>31</mn></msub></mtd><mtd><msub><mi>h</mi><mn>32</mn></msub></mtd><mtd><msub><mi>h</mi><mn>33</mn></msub></mtd></mtr>
+</mtable></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p>齐次坐标是<strong>尺度无关</strong>的：把整个 <code>H</code> 乘以任意非零常数，结果不变，因此可以固定 <code>h₃₃ = 1</code>，只剩 <code>8</code> 个未知量。最后再用第三分量做透视除法，得到真正的像素坐标：</p>
+<div class="math-equation" role="group" aria-label="透视除法">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="透视除法公式，可横向滚动">
+<math display="block" aria-label="像素坐标 u 等于 x prime 除以 w prime，v 等于 y prime 除以 w prime">
+<mrow>
+<mi>u</mi><mo>=</mo><mfrac><msup><mi>x</mi><mo>′</mo></msup><msup><mi>w</mi><mo>′</mo></msup></mfrac>
+<mspace width="2em"></mspace>
+<mi>v</mi><mo>=</mo><mfrac><msup><mi>y</mi><mo>′</mo></msup><msup><mi>w</mi><mo>′</mo></msup></mfrac>
+</mrow>
+</math>
+</div>
+</div>
+<p>每对点对应给出两个方程（<code>u</code> 与 <code>v</code> 各一个），所以 <code>4</code> 对点恰好提供 <code>8</code> 个方程，正好定出 <code>8</code> 个自由度——这就是为什么文档矫正<strong>只需要四个角</strong>。相比只含 6 个自由度的仿射变换，单应多出的两个自由度正是“近大远小”的透视项，也正因为如此，它<strong>不保持平行</strong>：梯形的一对平行边经映射后仍平行只会在退化情形发生。</p>
+<p class="note">本页的公式与 <code>H</code> 的定义是标准射影几何结论，用于解释 <code>cv2.getPerspectiveTransform</code> 在做什么；<code>geometry.py</code> 并不自己实现求解，而是直接调用 OpenCV。</p>
+</section>
+
+<section id="order" aria-labelledby="order-h">
+<h2 id="order-h">04 · 角点排序与输出尺寸：两个容易出错的地方</h2>
+<h3>把四个点摆成一致的顺序</h3>
+<p><code>getPerspectiveTransform</code> 对点的顺序<strong>极其敏感</strong>——把左上错配成右上，会得到翻转或扭曲的结果。为此 <code>order_corners</code> 先绕质心按角度排序：<code>arctan2(y−cy, x−cx)</code>，对凸四边形这会得到沿边一圈的顺序；再整体旋转，使 <code>x + y</code> 最小的点落到首位，即左上角。这样四点的排列稳定为<strong>左上、右上、右下、左下</strong>。</p>
+<p>该函数还有两道保险：输入必须是恰好 <code>4</code> 个有限点，否则抛 <code>ValueError</code>；排序后的多边形面积若小于 <code>1</code> 像素（退化四边形），同样报错。</p>
+<h3>输出矩形取多长多宽</h3>
+<p>输出尺寸由两条对边的较大长度决定，而不是任取一条：</p>
+<div class="math-equation" role="group" aria-label="输出宽度与高度的定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="输出尺寸公式，可横向滚动">
+<math display="block" aria-label="宽度取右下到左下、右上到左上两条边长度的较大者；高度取右上到右下、左上到左下两条边长度的较大者">
+<mrow>
+<mi>W</mi><mo>=</mo><mo>max</mo><mfenced><mrow><mo>‖</mo><msub><mi>p</mi><mrow><mi>b</mi><mi>r</mi></mrow></msub><mo>−</mo><msub><mi>p</mi><mrow><mi>b</mi><mi>l</mi></mrow></msub><mo>‖</mo><mo>,</mo><mspace width="0.4em"></mspace><mo>‖</mo><msub><mi>p</mi><mrow><mi>t</mi><mi>r</mi></mrow></msub><mo>−</mo><msub><mi>p</mi><mrow><mi>t</mi><mi>l</mi></mrow></msub><mo>‖</mo></mrow></mfenced>
+<mspace width="1.5em"></mspace>
+<mi>H</mi><mo>=</mo><mo>max</mo><mfenced><mrow><mo>‖</mo><msub><mi>p</mi><mrow><mi>t</mi><mi>r</mi></mrow></msub><mo>−</mo><msub><mi>p</mi><mrow><mi>b</mi><mi>r</mi></mrow></msub><mo>‖</mo><mo>,</mo><mspace width="0.4em"></mspace><mo>‖</mo><msub><mi>p</mi><mrow><mi>t</mi><mi>l</mi></mrow></msub><mo>−</mo><msub><mi>p</mi><mrow><mi>b</mi><mi>l</mi></mrow></msub><mo>‖</mo></mrow></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p>取较大值可保证内容不被裁掉，代价是<strong>长宽比不再透视正确</strong>——这一点在“边界与取舍”里详述。目标四角固定为 <code>(0,0)、(W−1,0)、(W−1,H−1)、(0,H−1)</code>，然后由 <code>cv2.warpPerspective</code> 完成实际重采样。输出前还有一道保护：若 <code>W·H > 12 000 000</code> 像素则抛 <code>ValueError</code>，避免极端输入引发内存爆炸。</p>
+</section>
+
+<section id="explore" aria-labelledby="explore-h">
+<h2 id="explore-h">05 · 观察角点：切换不同的斜拍形状</h2>
+<p>下面用三组固定的四角坐标演示 <code>order_corners</code> 与输出尺寸公式。切换预设，看看同一个公式在不同畸变程度下算出多宽的矩形。（这些坐标与结果是<strong>教学示意</strong>，用于展示公式行为，不是实验测量。）</p>
+<div class="control-row" role="group" aria-label="切换文档形状预设">
+<button type="button" data-preset="mild" aria-pressed="true">轻微倾斜</button>
+<button type="button" data-preset="strong" aria-pressed="false">强烈透视</button>
+<button type="button" data-preset="skew" aria-pressed="false">旋转 + 倾斜</button>
+</div>
+<p class="readout" id="geo-readout" aria-live="polite"></p>
+<p>注意“强烈透视”一组的对边长度差异最大：正因如此，<code>max</code> 会选中较长的那条边，输出矩形因而被拉大——这正是“比例不准但内容不丢”的取舍来源。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<h3>检测是保守的，会漏也会错</h3>
+<p><code>detect_document</code> 依赖几条简化假设：文档是画面中面积占比 <code>≥ 8%</code> 的<strong>凸四边形</strong>，且 Canny(45, 140) 能把它的边界连成闭合轮廓。一旦文档边缘卷曲、被遮挡、与背景对比度低，或画面里存在更大的四边形（桌面、窗户），轮廓排序就会选错目标。算法因此是“宁可返回 <code>None</code> 也不猜”：找到唯一候选才返回，否则交回上层报错。</p>
+<h3>尺寸 = 对边最大值，不是真实比例</h3>
+<p>前面提到输出长宽取对边较大者。若文档本身是 A4 比例，但拍摄时发生了强烈透视，两条“水平”边长度不等，取 <code>max</code> 会让矫正结果<strong>略微拉伸</strong>。要得到透视正确的比例，需要已知真实长宽比或相机内参（如 Zhang 的平面标定方法），那超出本仓库的合成数据范围。</p>
+<h3>不做去卷曲，也不重建内容</h3>
+<p>单应只能处理平面到平面的映射。纸张弯折属于<strong>非刚性形变</strong>，需要曲面模型或逐行去畸变；本模块一概不处理。矫正后的图像也只是几何重采样，缺失的像素不会被“补出来”。</p>
+<p>一致性检查：在合成场景下，<code>tests/test_algorithms.py::test_warp_document_corners</code> 造出一个矩形白块，断言 <code>detect_document</code> 能返回四角、<code>warp_document</code> 的输出不小于 <code>110×150</code>、且均值大于 <code>200</code>（即白纸仍占主导）。这是对“能检测、能矫正、没把内容翻掉”的最小回归保障。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>Hartley, R. &amp; Zisserman, A. (2004). <em>Multiple View Geometry in Computer Vision</em> (2nd ed.). Cambridge University Press. 平面单应与齐次坐标的标准教材。</li>
+<li>Zhang, Z. (2000). <em>A Flexible New Technique for Camera Calibration.</em> IEEE Trans. Pattern Analysis and Machine Intelligence 22(11):1330–1334. DOI: <a href="https://doi.org/10.1109/34.888718">10.1109/34.888718</a>。平面标定与单应估计的经典来源。</li>
+<li>OpenCV 官方文档：<code>getPerspectiveTransform</code> 与 <code>warpPerspective</code>，<a href="https://docs.opencv.org/4.x/da/d54/group__imgproc__transform.html">docs.opencv.org/4.x/da/d54</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/geometry.py</code>（<code>order_corners</code>、<code>warp_document</code>、<code>detect_document</code>）、CLI <code>scan</code> 子命令、<code>tests/test_algorithms.py::test_warp_document_corners</code>。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>；上一阶段：<a href="morphology.html">形态学与轮廓</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var presets = {
+    mild:   {label:'轻微倾斜', pts:[[40,220],[300,210],[292,60],[52,66]]},
+    strong: {label:'强烈透视', pts:[[30,240],[330,200],[250,40],[90,72]]},
+    skew:   {label:'旋转 + 倾斜', pts:[[90,230],[320,250],[300,70],[60,50]]},
+  };
+  function dist(a,b){var dx=a[0]-b[0],dy=a[1]-b[1];return Math.sqrt(dx*dx+dy*dy);}
+  function order(pts){
+    var cx=0,cy=0,i;
+    for(i=0;i<4;i++){cx+=pts[i][0];cy+=pts[i][1];}
+    cx/=4;cy/=4;
+    var ordered=pts.slice().sort(function(a,b){
+      return Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx);
+    });
+    var ti=0,min=Infinity;
+    for(i=0;i<4;i++){var s=ordered[i][0]+ordered[i][1];if(s<min){min=s;ti=i;}}
+    return ordered.slice(ti).concat(ordered.slice(0,ti));
+  }
+  function shoelace(p){
+    var a=0,i,j;
+    for(i=0;i<4;i++){j=(i+1)%4;a+=p[i][0]*p[j][1]-p[j][0]*p[i][1];}
+    return Math.abs(a)/2;
+  }
+  var out=document.getElementById('geo-readout');
+  var buttons=Array.prototype.slice.call(document.querySelectorAll('[data-preset]'));
+  function render(key){
+    var p=order(presets[key].pts);
+    var tl=p[0],tr=p[1],br=p[2],bl=p[3];
+    var w=Math.max(dist(br,bl),dist(tr,tl));
+    var h=Math.max(dist(tr,br),dist(tl,bl));
+    var W=Math.max(1,Math.round(w)),Hh=Math.max(1,Math.round(h));
+    out.textContent=presets[key].label+'：排序后 TL('+tl[0]+','+tl[1]+') TR('+tr[0]+','+tr[1]+') BR('+br[0]+','+br[1]+') BL('+bl[0]+','+bl[1]+')；'
+      +'输出尺寸 W='+W+' × H='+Hh+' 像素，源四边形面积约 '+Math.round(shoelace(p))+' 平方像素。';
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click',function(){
+      buttons.forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});
+      render(btn.dataset.preset);
+    });
+  });
+  render('mild');
+})();
+</script>
+</body>
+</html>
