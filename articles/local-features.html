@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="局部特征与匹配：ORB 二进制描述子、汉明距离、Lowe 比值检验与 RANSAC 单应估计，附本仓库参考实现。">
+<title>局部特征与匹配 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-size:.92rem;line-height:1.75;overflow-wrap:anywhere}
+ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>局部特征与匹配</strong><a href="#problem">01 · 问题</a><a href="#orb">02 · ORB 机制</a><a href="#math">03 · 公式</a><a href="#ransac">04 · 鲁棒几何</a><a href="#try">05 · 观察比值检验</a><a href="#limits">06 · 边界与取舍</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段四 · 特征</p>
+<h1>局部特征与匹配</h1>
+<p class="dek">要在两张图像之间找到对应点，先要有一个“可比较的局部描述”。从前面的像素级操作跳到特征级，本文说明 ORB 的二进制描述子为什么能用汉明距离比较、Lowe 比值检验在过滤什么，以及 RANSAC 如何从含错误对应的点集中估出单应。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么“逐像素相减”匹配不了两张照片</h2>
+<p>如果两张图只是平移了几个像素，相关就能找到对齐。但真实的两张照片会有旋转、尺度变化和视角变化：同一个物体在两图中占的像素完全对不上，逐像素比较会失效。解决办法是<strong>只挑少数稳定、可重复检测的局部点</strong>（关键点），并给每个点配一个对几何变换相对不敏感的描述向量，然后在描述空间里找最近邻。</p>
+<p>难点在于：这类邻居几乎总是存在，但其中大部分是错的（因为在另一张图的相似纹理上出现了更近的候选）。所以匹配问题分两步——<strong>先产生候选，再用统计检验与几何一致性剔除错误</strong>。这正是 ORB + 比值检验 + RANSAC 的分工。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-orb-title fig-orb-desc" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-orb-title">ORB 匹配流程：从关键点到经过几何验证的内点</title>
+<desc id="fig-orb-desc">两张图像各自提取 ORB 关键点与 256 位二进制描述子，用汉明距离做 k 近邻匹配，比值检验筛选候选，最后用 RANSAC 估计单应并统计内点。</desc>
+<rect width="680" height="320" rx="16" fill="#f3f9f6"/>
+<g font-size="13" text-anchor="middle" fill="#203035">
+<rect x="20" y="46" width="120" height="46" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/><text x="80" y="74">图像 A</text>
+<rect x="20" y="150" width="120" height="46" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/><text x="80" y="178">图像 B</text>
+<rect x="196" y="96" width="140" height="70" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="266" y="124">ORB</text><text x="266" y="144" font-size="11" fill="#53676d">关键点 + 256 位描述子</text>
+<rect x="386" y="96" width="140" height="70" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="456" y="124">汉明 kNN + 比值</text><text x="456" y="144" font-size="11" fill="#53676d">k=2, r=0.75</text>
+<rect x="576" y="96" width="84" height="70" rx="10" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/><text x="618" y="124">RANSAC</text><text x="618" y="144" font-size="11" fill="#53676d">内点 → H</text>
+<rect x="386" y="220" width="140" height="54" rx="10" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/><text x="456" y="243">候选匹配</text><text x="456" y="261" font-size="11" fill="#53676d">candidate_matches</text>
+<rect x="556" y="220" width="104" height="54" rx="10" fill="#e9f2ff" stroke="#147f80" stroke-width="1.5"/><text x="608" y="243">内点数</text><text x="608" y="261" font-size="11" fill="#53676d">inliers</text>
+</g>
+<g stroke="#147f80" stroke-width="3.5" fill="none" marker-end="url(#a5)">
+<path d="M140 69 C172 69 168 120 190 124"/><path d="M140 173 C172 173 168 142 190 138"/>
+<path d="M336 131 H378"/><path d="M526 131 H568"/><path d="M456 166 V214"/><path d="M526 247 H548"/>
+</g>
+<defs><marker id="a5" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>匹配流程：两张图分别提取 ORB 关键点与 256 位二进制描述子；用汉明距离的 k 近邻匹配（<code>k=2</code>）得到候选；比值检验（<code>r=0.75</code>）筛掉“第一与第二候选太接近”的不确定匹配；候选数 ≥4 时用 <code>findHomography(..., RANSAC, 3.0)</code> 估计单应并统计内点。实现见 <code>opencv_tutorial/features.py</code> 的 <code>match_orb</code>。</figcaption>
+</figure>
+</section>
+
+<section id="orb" aria-labelledby="orb-h">
+<h2 id="orb-h">02 · 核心机制：二进制描述子 + 汉明距离</h2>
+<p>ORB 不做浮点描述子，而是把每个关键点周围若干像素对的亮度比较结果编码成<strong>一个 256 位的比特串</strong>：若某对像素中第一个比第二个亮，该位为 1，否则为 0。这样描述子的比较只需按位异或再数 1 的个数——这就是汉明距离。它的代价极低，且对整体亮度变化不敏感，因为只用了“谁更亮”的相对关系。</p>
+<p>“k 近邻 + 比值检验”是一对搭档。为查询描述子找到最近的两个候选后，如果最近的与次近的<strong>都同样近</strong>，说明这个点的判别力不足（很可能只是重复纹理），应当丢弃。这比设一个绝对距离阈值更稳健，因为它随描述子的可区分程度自适应。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-ratio-title fig-ratio-desc" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-ratio-title">Lowe 比值检验：比较最近与次近候选的距离</title>
+<desc id="fig-ratio-desc">查询描述子与最近候选的距离 d1 必须明显小于与次近候选的距离 d2，才保留该匹配。</desc>
+<rect width="680" height="240" rx="16" fill="#f3f9f6"/>
+<rect x="40" y="95" width="110" height="50" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="95" y="126" font-size="13" text-anchor="middle" fill="#203035">查询描述子</text>
+<line x1="150" y1="120" x2="300" y2="70" stroke="#147f80" stroke-width="3.5"/>
+<line x1="150" y1="120" x2="300" y2="170" stroke="#d06d4d" stroke-width="3.5" stroke-dasharray="7 5"/>
+<rect x="300" y="46" width="150" height="46" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="375" y="74" font-size="13" text-anchor="middle" fill="#203035">最近候选 1</text>
+<rect x="300" y="148" width="150" height="46" rx="10" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="375" y="176" font-size="13" text-anchor="middle" fill="#203035">次近候选 2</text>
+<text x="215" y="86" font-size="12" fill="#147f80">d₁ 小</text>
+<text x="215" y="165" font-size="12" fill="#d06d4d">d₂ 大</text>
+<text x="520" y="106" font-size="14" fill="#203035">若 d₁ &lt; r·d₂ → 保留</text>
+<text x="520" y="132" font-size="14" fill="#53676d">否则视为模糊，丢弃</text>
+</svg>
+<figcaption>比值检验：<code>d₁</code> 是与最近候选的描述子距离，<code>d₂</code> 是与次近候选的距离。仅当 <code>d₁ &lt; r·d₂</code>（本仓库取 <code>r = 0.75</code>）才保留。<code>r</code> 越小越严格、候选越少但越可靠；越大越宽松、候选越多但错误也多。</figcaption>
+</figure>
+</section>
+
+<section id="math" aria-labelledby="math-h">
+<h2 id="math-h">03 · 公式</h2>
+<p>汉明距离等于两个等长比特串逐位异或后 1 的个数。对 256 位描述子：</p>
+<div class="math-equation" role="group" aria-label="汉明距离">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="汉明距离公式，可横向滚动">
+<math display="block" aria-label="汉明距离等于对 k 从 1 到 256 求和的 a k 不等于 b k 的指示">
+<mrow>
+<msub><mi>d</mi><mi>H</mi></msub><mo>(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>)</mo><mo>=</mo>
+<munder><mo>∑</mo><mrow><mn>1</mn><mo>≤</mo><mi>k</mi><mo>≤</mo><mn>256</mn></mrow></munder>
+<mrow><mo>[</mo><msub><mi>a</mi><mi>k</mi></msub><mo>≠</mo><msub><mi>b</mi><mi>k</mi></msub><mo>]</mo></mrow>
+</mrow>
+</math>
+</div>
+</div>
+<p>比值检验把“最近”和“次近”放在一起做相对判断。设 <code>m</code> 为最近匹配、<code>n</code> 为次近匹配：</p>
+<div class="math-equation" role="group" aria-label="Lowe 比值检验">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="Lowe 比值检验公式，可横向滚动">
+<math display="block" aria-label="保留条件：m 的距离小于 r 乘以 n 的距离">
+<mrow>
+<mi>d</mi><mo>(</mo><mi>m</mi><mo>)</mo><mo>&lt;</mo><mi>r</mi><mo>·</mo><mi>d</mi><mo>(</mo><mi>n</mi><mo>)</mo>
+</mrow>
+</math>
+</div>
+</div>
+<p>当候选匹配不少于 4 对时，就可以解单应矩阵 <code>H</code>（3×3、尺度等价，因此自由度 8）。它把一对齐次坐标映到另一对：</p>
+<div class="math-equation" role="group" aria-label="单应映射">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="单应映射的矩阵形式，可横向滚动">
+<math display="block" aria-label="向量 x 撇 y 撇 w 撇 等于 3 乘 3 的单应矩阵 H 乘以向量 x y 1">
+<mrow>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><msup><mi>x</mi><mo>′</mo></msup></mtd></mtr>
+<mtr><mtd><msup><mi>y</mi><mo>′</mo></msup></mtd></mtr>
+<mtr><mtd><msup><mi>w</mi><mo>′</mo></msup></mtd></mtr>
+</mtable></mfenced>
+<mo>=</mo>
+<mi>H</mi>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><mi>x</mi></mtd></mtr>
+<mtr><mtd><mi>y</mi></mtd></mtr>
+<mtr><mtd><mn>1</mn></mtd></mtr>
+</mtable></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p class="note">单应只在“场景近似平面或相机纯旋转”时严格成立；对一般三维场景，它给出的是一个近似或退化模型。本仓库只用它做几何一致性验证（内点统计），并不声称能恢复真实三维结构。</p>
+</section>
+
+<section id="ransac" aria-labelledby="ransac-h">
+<h2 id="ransac-h">04 · 鲁棒几何：RANSAC 在做什么</h2>
+<p>比值检验已经筛掉了一部分错误匹配，但剩余候选里仍有错误。RANSAC 的思路是：<strong>反复随机抽取最小样本（这里是 4 对点）估计一个模型，然后统计全集中有多少点与该模型一致（内点）</strong>，保留内点最多的那个模型。它不要求大多数点是正确的，只要求存在足够多的正确点构成“共识”。</p>
+<p>本仓库调用 <code>findHomography(src, dst, cv2.RANSAC, 3.0)</code>：重投影阈值 <code>3.0</code> 像素以内的点算内点。结果对象里的 <code>inliers = int(np.sum(mask))</code> 就是共识集大小，可作为匹配质量的量化证据。需要强调的是：<strong>内点数多不等于匹配正确</strong>——如果图像含大量重复结构（例如规则纹理），RANSAC 可能收敛到一个几何上自洽但语义错误的解。</p>
+</section>
+
+<section id="try" aria-labelledby="try-h">
+<h2 id="try-h">05 · 观察比值检验：r 如何改变候选数</h2>
+<p>下面用一组固定的<strong>合成匹配距离对</strong>（每对给出最近距离 <code>d₁</code> 与次近距离 <code>d₂</code>，单位为比特差异，<strong>教学示意</strong>），按同一套比值规则统计保留数量。切换 <code>r</code> 观察严格性的代价：</p>
+<div class="control-row" role="group" aria-label="选择比值阈值 r">
+<button type="button" data-r="0.6" aria-pressed="false">r = 0.60（严格）</button>
+<button type="button" data-r="0.75" aria-pressed="true">r = 0.75（默认）</button>
+<button type="button" data-r="0.9" aria-pressed="false">r = 0.90（宽松）</button>
+</div>
+<p class="readout" id="ratio-readout" aria-live="polite"></p>
+<p>结论是明确的取舍：<code>r</code> 从 0.60 放宽到 0.90，保留的候选明显增多，但其中决策边界模糊的匹配（<code>d₁</code> 与 <code>d₂</code> 接近）也一并被放进来，需要 RANSAC 去兜底。这也是为什么单独看“匹配数量”不能评价匹配质量。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<h3>失败模式</h3>
+<p>一是<strong>重复纹理</strong>：火柴盒、砖墙、棋盘等局部外观高度相似，比值检验会把它们全部判为模糊而丢弃，或留下大量错误匹配。二是<strong>视角变化过大</strong>：局部外观随之改变，描述子不再稳定。三是<strong>候选不足</strong>：<code>match_orb</code> 要求至少 4 对候选才估计单应，否则返回 <code>H = None</code> 且 <code>inliers = 0</code>——这是显式的失败信号，而不是异常。</p>
+<h3>参数范围</h3>
+<p><code>max_features</code> 被限制在 <code>[50, 10000]</code>，越界会抛出 <code>ValueError</code>。特征数太少会导致候选不足；太多则拖慢匹配且引入更多弱特征。预览图只绘制前 <code>80</code> 条匹配，属于显示上限，不影响统计。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>Rublee, E., Rabaud, V., Konolige, K., Bradski, G. (2011). <em>ORB: An Efficient Alternative to SIFT or SURF.</em> IEEE International Conference on Computer Vision (ICCV)。</li>
+<li>Lowe, D. G. (2004). <em>Distinctive Image Features from Scale-Invariant Keypoints.</em> International Journal of Computer Vision 60(2):91–110（比值检验的出处）。</li>
+<li>Fischler, M. A., Bolles, R. C. (1981). <em>Random Sample Consensus.</em> Communications of the ACM 24(6):381–395（RANSAC 的出处）。</li>
+<li>OpenCV 官方文档（<code>ORB</code>、<code>BFMatcher</code>、<code>findHomography</code>），<a href="https://docs.opencv.org/4.x/d1/d89/tutorial_py_orb.html">docs.opencv.org/4.x/d1/d89</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/features.py</code>（<code>match_orb</code>、<code>MatchResult</code>）。路径总览：<a href="index.html">从像素到理解</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var pairs = [[20,60],[30,45],[15,80],[40,42],[25,33],[50,55],[10,90],[35,36],[22,70],[45,60]];
+  var out = document.getElementById('ratio-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-r]'));
+  function render(r){
+    var kept = [];
+    pairs.forEach(function(p, i){ if (p[0] < r * p[1]) kept.push('#' + (i+1) + ' (' + p[0] + ',' + p[1] + ')'); });
+    out.textContent = 'r = ' + r + ' ｜ 共 ' + pairs.length + ' 个候选，保留 ' + kept.length +
+      ' 个 ｜ 保留：' + (kept.length ? kept.join('，') : '（无）');
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(Number(btn.dataset.r));
+    });
+  });
+  render(0.75);
+})();
+</script>
+</body>
+</html>
