@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="形态学与轮廓：腐蚀/膨胀/开/闭的集合定义与用途，以及 RETR_EXTERNAL 轮廓提取为什么依赖阈值，附本仓库参考实现。">
+<title>形态学与轮廓 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-size:.92rem;line-height:1.75;overflow-wrap:anywhere}
+.sig{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.14em;font-size:1rem;overflow-wrap:anywhere}
+ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>形态学与轮廓</strong><a href="#problem">01 · 问题</a><a href="#morph">02 · 腐蚀与膨胀</a><a href="#openclose">03 · 开与闭</a><a href="#contours">04 · 轮廓提取</a><a href="#try">05 · 观察形态学</a><a href="#limits">06 · 边界与取舍</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段五 · 形态与结构</p>
+<h1>形态学与轮廓</h1>
+<p class="dek">二值化之后，图像里往往既有真实目标又有零星噪点。形态学用“一个结构元在图像上滑动、做集合运算”的方式清理它们；轮廓提取则把连通区域换成可测量的边界。本文给出这两步的集合定义、在共享管线里的实现，以及它们为何对阈值极其敏感。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 二值图为什么还需要“整形”</h2>
+<p>阈值分割（上一阶段）给出的前景图是<strong>逐像素独立判决</strong>的结果，因此没有任何空间一致性约束：一个孤立噪点只要够亮，就会被判成前景；目标内部一个略暗的像素，就会被挖成一个洞。形态学补上了这个约束——它不看单个像素，而看<strong>像素的邻域形状</strong>，用小结构元去度量“局部是否整块地属于前景”。</p>
+<p>而轮廓提取把二值图里连通的区域变成一组边界点，从而可以计算面积、外接矩形、连通数量等几何量。它同样只看二值图，因此它的结果好坏完全继承自分割质量。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-morph-title fig-morph-desc" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-morph-title">开运算去除小噪点、闭运算填补小孔洞</title>
+<desc id="fig-morph-desc">同一张含噪二值图，开运算移除了孤立小点，闭运算把目标内部的小孔洞填上。</desc>
+<rect width="680" height="300" rx="16" fill="#f3f9f6"/>
+<g fill="#203035">
+<rect x="50" y="70" width="120" height="90" rx="14"/><circle cx="95" cy="200" r="6"/><circle cx="140" cy="210" r="5"/><circle cx="200" cy="66" r="6"/>
+<rect x="255" y="70" width="120" height="90" rx="14"/><circle cx="315" cy="115" r="12" fill="#f3f9f6"/>
+<rect x="460" y="70" width="120" height="90" rx="14"/>
+</g>
+<g font-size="13" fill="#53676d" text-anchor="middle">
+<text x="110" y="252">① 含噪二值图</text><text x="315" y="252">② 目标内部有小洞</text><text x="520" y="252">③ 清理后的结果</text>
+</g>
+<text x="315" y="36" font-size="14" fill="#147f80" text-anchor="middle">开运算：去掉孤立点</text>
+<text x="315" y="286" font-size="14" fill="#d06d4d" text-anchor="middle">闭运算：填掉小洞</text>
+<g stroke="#147f80" stroke-width="3.5" fill="none" marker-end="url(#a6)">
+<path d="M215 115 H248"/><path d="M420 115 H452"/>
+</g>
+<defs><marker id="a6" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>形态学的两个组合算子：开运算（先腐蚀后膨胀）删除比结构元小的前景块，对应①里的孤立噪点；闭运算（先膨胀后腐蚀）填平比结构元小的背景洞，对应②里的孔洞。共享管线按<strong>先开后闭</strong>的顺序执行，并把开运算结果暴露为 <code>opening</code> 阶段。图中形状为教学示意。</figcaption>
+</figure>
+</section>
+
+<section id="morph" aria-labelledby="morph-h">
+<h2 id="morph-h">02 · 核心机制：腐蚀与膨胀</h2>
+<p>形态学的两个原子操作定义在集合上。设 <code>A</code> 是前景像素集合，<code>B</code> 是结构元（一个小的形状模板）。腐蚀保留“<code>B</code> 能完全放进 <code>A</code>”的那些位置：</p>
+<div class="math-equation" role="group" aria-label="腐蚀的集合定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="腐蚀定义公式，可横向滚动">
+<math display="block" aria-label="A 腐蚀 B 等于所有 z，使得平移后的 B 包含于 A">
+<mrow>
+<mi>A</mi><mo>⊖</mo><mi>B</mi><mo>=</mo>
+<mfenced><mrow><mi>z</mi><mo>∣</mo><msub><mi>B</mi><mi>z</mi></msub><mo>⊆</mo><mi>A</mi></mrow></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p>膨胀保留“<code>B</code> 与 <code>A</code> 相交”的位置，注意这里用到结构元的反射：</p>
+<div class="math-equation" role="group" aria-label="膨胀的集合定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="膨胀定义公式，可横向滚动">
+<math display="block" aria-label="A 膨胀 B 等于所有 z，使得反射平移后的 B 与 A 相交非空">
+<mrow>
+<mi>A</mi><mo>⊕</mo><mi>B</mi><mo>=</mo>
+<mfenced><mrow><mi>z</mi><mo>∣</mo><msub><mover><mi>B</mi><mo>^</mo></mover><mi>z</mi></msub><mo>∩</mo><mi>A</mi><mo>≠</mo><mi>∅</mi></mrow></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p>直观理解：腐蚀让前景“变瘦”，能抹掉比结构元窄的结构；膨胀让前景“变胖”，能连接断裂并填小洞。两者都<strong>不可逆</strong>——腐蚀后再膨胀不能恢复被抹掉的信息。</p>
+<p class="note">本仓库用的是椭圆结构元：<code>getStructuringElement(MORPH_ELLIPSE, (k, k))</code>，尺寸 <code>k</code> 直接取参数 <code>kernel</code>（<code>3…31</code> 的奇数）。椭圆比方形更接近各向同性的圆形邻域，代价是略慢。</p>
+</section>
+
+<section id="openclose" aria-labelledby="openclose-h">
+<h2 id="openclose-h">03 · 开与闭：把原子操作组合起来</h2>
+<p>单独用腐蚀会不断侵蚀目标，单独用膨胀会不断吞并背景。把二者按不同顺序组合，就得到两个更“温和”的算子：</p>
+<div class="math-equation" role="group" aria-label="开运算与闭运算">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="开运算与闭运算公式，可横向滚动">
+<math display="block" aria-label="开运算等于先腐蚀后膨胀；闭运算等于先膨胀后腐蚀">
+<mrow>
+<mi>A</mi><mo>∘</mo><mi>B</mi><mo>=</mo><mo>(</mo><mi>A</mi><mo>⊖</mo><mi>B</mi><mo>)</mo><mo>⊕</mo><mi>B</mi>
+<mspace width="2.5em"></mspace>
+<mi>A</mi><mo>•</mo><mi>B</mi><mo>=</mo><mo>(</mo><mi>A</mi><mo>⊕</mo><mi>B</mi><mo>)</mo><mo>⊖</mo><mi>B</mi>
+</mrow>
+</math>
+</div>
+</div>
+<ul class="plain">
+<li><strong>开运算 <code>A ∘ B</code></strong>：先腐蚀（抹掉小结构）再膨胀（把幸存的大结构恢复尺寸）。净效果是删除小于结构元的前景块，而大目标基本保持原样。</li>
+<li><strong>闭运算 <code>A • B</code></strong>：先膨胀（填缝）再腐蚀（把整体尺寸收回来）。净效果是填平小于结构元的背景洞与细缝。</li>
+</ul>
+<p>共享管线的 <code>morphology</code> 分支严格按 <code>binary → opening → closing → result</code> 执行，其中 <code>binary</code> 与 <code>opening</code> 都是可检查的阶段图。</p>
+</section>
+
+<section id="contours" aria-labelledby="contours-h">
+<h2 id="contours-h">04 · 从二值图到可测量的轮廓</h2>
+<p>二值图里，轮廓就是前景与背景之间的边界。本仓库使用两个模式：</p>
+<ul class="plain">
+<li><code>RETR_EXTERNAL</code>：只取<strong>最外层</strong>轮廓，忽略嵌套的内部轮廓（例如环形的内边界不算独立目标）。</li>
+<li><code>CHAIN_APPROX_SIMPLE</code>：对水平/垂直/对角方向的连续边界点只保留端点，压缩冗余点，因此轮廓点数远小于周长像素数。</li>
+</ul>
+<p>管线把结果画在原 BGR 图副本上（颜色 <code>(70, 225, 160)</code>、线宽 <code>2</code>），并把轮廓条数记为 <code>contour_count</code>。这个数字是最容易被误读的指标：</p>
+<div class="note"><strong>轮廓数量不等于目标数量。</strong>它依赖阈值、是否做过形态学清理、以及是否有噪点。一个目标可能因内部空洞被 <code>RETR_LIST</code> 拆成多条轮廓；反过来，两个相触的目标可能被合并成一条。<code>contour_count</code> 只是当前参数下边界条数的计数，不构成“检测到 N 个物体”的结论。</div>
+</section>
+
+<section id="try" aria-labelledby="try-h">
+<h2 id="try-h">05 · 观察形态学：一维信号上的四个操作</h2>
+<p>把二维形态学压到一维、便于逐点看清效果（<strong>教学示意</strong>）：一条由 0/1 组成的一维前景信号，结构元是长度 3、全 1 的窗口，边界按背景 0 处理。点击查看不同操作的结果：</p>
+<div class="control-row" role="group" aria-label="选择形态学操作">
+<button type="button" data-op="erode" aria-pressed="false">腐蚀</button>
+<button type="button" data-op="dilate" aria-pressed="false">膨胀</button>
+<button type="button" data-op="open" aria-pressed="true">开运算</button>
+<button type="button" data-op="close" aria-pressed="false">闭运算</button>
+</div>
+<p class="readout" id="morph-readout" aria-live="polite"></p>
+<p>观察这条信号：右侧有一个宽 4 的块（<code>1111</code>），中部有一个孤立点和一个宽 2 的短块。开运算会抹掉短块和孤立点、保留宽块；闭运算则把宽 1、宽 2 的<strong>缝</strong>填上，但填不平宽 3 的大缝。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<h3>失败模式</h3>
+<p>一是<strong>结构元过大</strong>：开运算会把本该保留的细小目标一并删除，闭运算会把相邻目标粘成一个。结构元尺寸必须小于目标、大于噪声，而这两者之间未必总有安全区间。二是<strong>顺序敏感</strong>：先闭后开与先开后闭结果不同；本仓库固定为先开后闭（先去噪再补洞），这个顺序是一种工程选择，换任务可能需要调换。三是<strong>继承阈值误差</strong>：形态学与轮廓都建立在二值图上，阈值偏差会原样传递，无法被后续步骤修复。</p>
+<h3>能做什么，不能做什么</h3>
+<p>形态学是几何/拓扑层面的清理工具，它<strong>不理解语义</strong>：它无法区分“该保留的小目标和该删除的噪点”，因为它只看形状与尺寸。把轮廓数当检测数、或把形态学当成万能去噪，都是常见的过度解读。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>OpenCV 官方文档（<code>erode</code>、<code>dilate</code>、<code>morphologyEx</code>、<code>findContours</code>），<a href="https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html">docs.opencv.org/4.x/d9/d61</a>。</li>
+<li>形态学算子沿用数学形态学的标准集合定义，可参见 OpenCV 的 <code>Image Filtering</code> 一节，<a href="https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html">docs.opencv.org/4.x/d4/d86</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/pipeline.py</code>（<code>morphology</code> 与 <code>contours</code> 分支、<code>contour_count</code>）。</li>
+<li>上一阶段：<a href="thresholding.html">阈值分割</a>；路径总览：<a href="index.html">从像素到理解</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var signal = [0,0,1,1,1,0,1,0,0,1,1,0,0,0,1,1,1,1,0];
+  var SE = [1,1,1], c = 1;
+  function get(a, i){ return (i < 0 || i >= a.length) ? 0 : a[i]; }
+  function erode(a){ return a.map(function(_, i){
+    for (var j = -c; j <= c; j++){ if (SE[j+c] === 1 && get(a, i+j) !== 1) return 0; }
+    return 1;
+  }); }
+  function dilate(a){ return a.map(function(_, i){
+    for (var j = -c; j <= c; j++){ if (SE[j+c] === 1 && get(a, i+j) === 1) return 1; }
+    return 0;
+  }); }
+  var ops = {
+    erode: { out: erode(signal), note: '腐蚀：只有整个窗口都在前景里的位置才保留，孤立点与短块被削掉。' },
+    dilate: { out: dilate(signal), note: '膨胀：窗口内只要有前景就点亮，目标变胖、缝隙被填。' },
+    open: { out: dilate(erode(signal)), note: '开运算 = 腐蚀 → 膨胀：删除比结构元小的前景块，保留大块。' },
+    close: { out: erode(dilate(signal)), note: '闭运算 = 膨胀 → 腐蚀：填平比结构元小的背景缝，大缝仍在。' }
+  };
+  var out = document.getElementById('morph-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-op]'));
+  function row(a){ return a.map(function(v){ return v ? '█' : '·'; }).join(' '); }
+  function render(key){
+    var o = ops[key];
+    out.innerHTML = '<span class="sig">输入：' + row(signal) + '</span><br>' +
+      '<span class="sig">输出：' + row(o.out) + '</span><br>' + o.note;
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(btn.dataset.op);
+    });
+  });
+  render('open');
+})();
+</script>
+</body>
+</html>
