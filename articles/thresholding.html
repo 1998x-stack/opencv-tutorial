@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="阈值分割：Otsu 类间方差的推导、二值化比较约定，以及自适应阈值为什么要用局部邻域，附本仓库参考实现。">
+<title>阈值分割 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-size:.92rem;line-height:1.75;overflow-wrap:anywhere}
+ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>阈值分割</strong><a href="#problem">01 · 问题</a><a href="#otsu">02 · Otsu 机制</a><a href="#math">03 · 公式</a><a href="#adaptive">04 · 自适应阈值</a><a href="#try">05 · 观察阈值</a><a href="#limits">06 · 边界与取舍</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段三 · 分割</p>
+<h1>阈值分割</h1>
+<p class="dek">把灰度图变成前景/背景是最实用的分割手段，但“阈值取多少”本身是一个优化问题。本文推导 Otsu 的类间方差目标，说明二值化的比较约定，并解释为什么光照不均时全局阈值必然失效。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 一个数字能决定什么</h2>
+<p>二值化的规则简单到一句话：灰度大于某个阈值就判为前景，否则判为背景。困难完全在于<strong>选阈值</strong>。手挑一个数（比如 120）在示例图上也许还行，但换一张整体偏亮的图就全乱。Otsu 方法给出一个不依赖手工调参的答案：挑那个能让“前景/背景两类的类内差异最小”的阈值——等价于让两类<strong>类间方差最大</strong>。</p>
+<p>它成立的前提是：灰度直方图呈现双峰，且两峰之间的谷底对应阈值。当光照不均或前景占比极小，这个前提就被破坏，于是需要自适应阈值用局部邻域来替代全局统计。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-hist-title fig-hist-desc" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-hist-title">双峰直方图与 Otsu 选择的分割阈值</title>
+<desc id="fig-hist-desc">直方图有两个峰，Otsu 在谷底附近选择阈值 t，把像素分成左侧背景类与右侧前景类。</desc>
+<rect width="680" height="260" rx="16" fill="#f3f9f6"/>
+<path d="M60 210 C120 210 150 78 190 78 C230 78 265 210 320 210 Z" fill="#d6f1eb" stroke="#147f80" stroke-width="2"/>
+<path d="M330 210 C385 210 415 66 460 66 C505 66 545 210 620 210 Z" fill="#ffecd9" stroke="#d06d4d" stroke-width="2"/>
+<line x1="60" y1="210" x2="620" y2="210" stroke="#53676d" stroke-width="1.5"/>
+<line x1="365" y1="60" x2="365" y2="216" stroke="#7461ba" stroke-width="3" stroke-dasharray="6 5"/>
+<g font-size="13" fill="#53676d" text-anchor="middle">
+<text x="190" y="240">背景（低灰度）</text>
+<text x="470" y="240">前景（高灰度）</text>
+<text x="365" y="50" fill="#7461ba">t*</text>
+</g>
+<circle cx="190" cy="78" r="4" fill="#147f80"/><circle cx="460" cy="66" r="4" fill="#d06d4d"/>
+<text x="205" y="70" font-size="12" fill="#147f80">μ₀</text>
+<text x="475" y="58" font-size="12" fill="#d06d4d">μ₁</text>
+</svg>
+<figcaption>Otsu 在 0–255 的阈值空间中扫描：每个候选阈值 <code>t</code> 把直方图切成 ≤t 与 &gt;t 两类，计算两类之间的方差，取最大者。谷底越深，选取越稳定。实现见 <code>algorithms.py</code> 的 <code>otsu_manual</code>，它会返回被选中的 8 位阈值（管线记录在 <code>selected_threshold</code>）。</figcaption>
+</figure>
+</section>
+
+<section id="otsu" aria-labelledby="otsu-h">
+<h2 id="otsu-h">02 · 核心机制：最大化类间方差</h2>
+<p>把归一化直方图记为 <code>p_i</code>（灰度 <code>i</code> 的出现频率，<code>Σp_i = 1</code>）。对候选阈值 <code>t</code>：</p>
+<ul class="plain">
+<li>左侧（背景）的累计概率 <code>ω(t) = Σ_{i≤t} p_i</code>，一阶矩 <code>μ(t) = Σ_{i≤t} i·p_i</code>。</li>
+<li>右侧（前景）的概率是 <code>1 − ω(t)</code>，其均值由全图均值 <code>μ_T</code> 与 <code>ω(t), μ(t)</code> 推出。</li>
+</ul>
+<p>类间方差可以写成只依赖累计量的闭式，无需为每个阈值重算均值：</p>
+<div class="math-equation" role="group" aria-label="Otsu 类间方差">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="Otsu 类间方差公式，可横向滚动">
+<math display="block" aria-label="类间方差等于 mu_T 乘 omega 减 mu 的平方，除以 omega 乘 1 减 omega">
+<mrow>
+<msubsup><mi>σ</mi><mi>B</mi><mn>2</mn></msubsup><mo>(</mo><mi>t</mi><mo>)</mo><mo>=</mo>
+<mfrac>
+<msup><mrow><mo>(</mo><msub><mi>μ</mi><mi>T</mi></msub><mo>·</mo><mi>ω</mi><mo>(</mo><mi>t</mi><mo>)</mo><mo>−</mo><mi>μ</mi><mo>(</mo><mi>t</mi><mo>)</mo><mo>)</mo></mrow><mn>2</mn></msup>
+<mrow><mi>ω</mi><mo>(</mo><mi>t</mi><mo>)</mo><mo>·</mo><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mi>ω</mi><mo>(</mo><mi>t</mi><mo>)</mo><mo>)</mo></mrow></mrow>
+</mfrac>
+</mrow>
+</math>
+</div>
+</div>
+<p>把这个式子对 <code>t = 0…255</code> 求值，取最大处（并列时取第一个，与常见离散实现一致）：</p>
+<div class="math-equation" role="group" aria-label="Otsu 阈值是最优解">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="Otsu 阈值取类间方差最大的 t，可横向滚动">
+<math display="block" aria-label="最优阈值 t 星等于使类间方差最大的 t">
+<mrow>
+<msup><mi>t</mi><mo>*</mo></msup><mo>=</mo>
+<munder><mo>arg max</mo><mrow><mn>0</mn><mo>≤</mo><mi>t</mi><mo>≤</mo><mn>255</mn></mrow></munder>
+<msubsup><mi>σ</mi><mi>B</mi><mn>2</mn></msubsup><mo>(</mo><mi>t</mi><mo>)</mo>
+</mrow>
+</math>
+</div>
+</div>
+<p class="note">分母 <code>ω(t)·(1−ω(t))</code> 在 <code>ω(t)=0</code> 或 <code>1</code>（阈值落在直方图两端之外）时为 0。参考实现显式地把这些位置排除，避免除零产生 NaN——这是<strong>工程实现</strong>的必要处理，论文级公式默认概率非退化。</p>
+</section>
+
+<section id="math" aria-labelledby="math-h">
+<h2 id="math-h">03 · 从阈值到二值图</h2>
+<p>选定阈值后，二值化是一个逐像素的硬判决。本仓库的约定是<strong>严格大于</strong>：</p>
+<pre><code>def binary_threshold(image, threshold):
+    return np.where(image &gt; threshold, 255, 0).astype(np.uint8)</code></pre>
+<p>注意边界：像素<em>恰好等于</em>阈值时归为背景（0），而不是前景。这个约定必须与对照实现一致，否则会出现整行像素的差异。共享管线里 <code>otsu</code> 分支用同一个 <code>binary_threshold</code> 生成结果，并把它与 <code>cv2.threshold(..., THRESH_BINARY + THRESH_OTSU)</code> 逐像素比较，把不一致的像素数记为 <code>reference_pixel_difference</code>。<strong>这个指标是“参考一致性”的证据，不是“分割质量”的证据</strong>——两套实现完全一致，也可能都分割得很差。</p>
+</section>
+
+<section id="adaptive" aria-labelledby="adaptive-h">
+<h2 id="adaptive-h">04 · 自适应阈值：把阈值变成局部量</h2>
+<p>全局阈值的致命假设是“整张图光照均匀”。一旦有光照梯度，同一个灰度值在亮区可能属于背景、在暗区可能属于前景，任何单一阈值都会在某一侧失败。</p>
+<p>自适应阈值的做法：对每个像素，用它的局部邻域（共享管线用高斯加权邻域）估计一个局部基准，再减去一个常数偏置 <code>C</code>，得到该像素专属的阈值。于是阈值本身随位置变化，能够跟随光照漂移。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-adap-title fig-adap-desc" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-adap-title">全局阈值与自适应阈值在光照渐变下的差别</title>
+<desc id="fig-adap-desc">左侧用单一全局阈值，在亮暗两端之一失败；右侧用每个像素的局部邻域阈值，两侧都能正确分割。</desc>
+<rect width="680" height="300" rx="16" fill="#f3f9f6"/>
+<defs>
+<linearGradient id="lit" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#1b222b"/><stop offset="1" stop-color="#c9d3dd"/>
+</linearGradient>
+</defs>
+<text x="30" y="30" font-size="14" fill="#53676d">① 全局阈值：单一数字无法同时适应亮暗两端</text>
+<rect x="30" y="44" width="250" height="120" rx="8" fill="url(#lit)" stroke="#53676d"/>
+<rect x="60" y="72" width="80" height="64" rx="6" fill="#ffffff" opacity="0.85" stroke="#d06d4d" stroke-width="2"/>
+<rect x="175" y="72" width="80" height="64" rx="6" fill="#ffffff" opacity="0.85" stroke="#d06d4d" stroke-width="2"/>
+<rect x="30" y="184" width="250" height="80" rx="8" fill="#fff" stroke="#53676d"/>
+<path d="M40 244 h60 v-40 h-60 z" fill="#203035"/><path d="M135 244 h60 v-60 h-60 z" fill="#203035" opacity="0.45"/>
+<text x="155" y="284" font-size="11" text-anchor="middle" fill="#53676d">暗物体被漏掉 / 亮物体不完整</text>
+<text x="380" y="30" font-size="14" fill="#53676d">② 自适应阈值：窗口随位置给出局部基准</text>
+<rect x="380" y="44" width="250" height="120" rx="8" fill="url(#lit)" stroke="#53676d"/>
+<rect x="405" y="72" width="80" height="64" rx="6" fill="none" stroke="#147f80" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="500" y="72" width="80" height="64" rx="6" fill="none" stroke="#147f80" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="380" y="184" width="250" height="80" rx="8" fill="#fff" stroke="#53676d"/>
+<path d="M390 244 h60 v-40 h-60 z" fill="#203035"/><path d="M485 244 h60 v-60 h-60 z" fill="#203035"/>
+<text x="505" y="284" font-size="11" text-anchor="middle" fill="#53676d">两侧都正确分割</text>
+</svg>
+<figcaption>同一张光照渐变的图像：固定全局阈值在暗端或亮端之一失败；自适应阈值用每个像素的局部高斯加权邻域估计基准，因此阈值随位置漂移。共享管线调用 <code>cv2.adaptiveThreshold(gray, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kernel, 3)</code>，其中邻域尺寸直接取参数 <code>kernel</code>，偏置常数 <code>C = 3</code>。图中形状为<strong>教学示意</strong>，用于对比两种策略的行为差异。</figcaption>
+</figure>
+</section>
+
+<section id="try" aria-labelledby="try-h">
+<h2 id="try-h">05 · 观察阈值：直方图形状如何影响 Otsu</h2>
+<p>下面用与 <code>otsu_manual</code> 相同的公式，在三个<strong>合成双峰直方图</strong>上计算阈值与最大类间方差。切换预设，观察“峰分离程度”和“类别不平衡”如何改变结果：</p>
+<div class="control-row" role="group" aria-label="选择合成直方图预设">
+<button type="button" data-preset="separated" aria-pressed="true">分离良好</button>
+<button type="button" data-preset="overlap" aria-pressed="false">部分重叠</button>
+<button type="button" data-preset="imbalance" aria-pressed="false">类别不平衡</button>
+</div>
+<p class="readout" id="otsu-readout" aria-live="polite"></p>
+<p>这三个预置暴露了 Otsu 的边界：分离良好时阈值稳定落在谷底；部分重叠时最大类间方差本身很小（说明“双峰假设”不成立，阈值不可信）；类别严重不平衡时，方差最大的位置会被大类拉偏。<strong>数值为合成直方图上的教学示意</strong>，不是任何真实图像或本仓库测试的结果。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<h3>失败模式</h3>
+<p>一是<strong>单峰直方图</strong>：没有真正的两类，Otsu 仍会返回一个阈值并把图像切成两半，但切法没有语义。二是<strong>光照不均</strong>：全局统计被照度梯度主导，需换自适应阈值。三是<strong>噪声</strong>：二值化前若不做滤波，孤立噪点会变成孤立的前景斑块——这正好是下一阶段（形态学）要清理的对象。</p>
+<h3>自适应阈值的注意点</h3>
+<p>邻域尺寸 <code>kernel</code> 必须为奇数且足够大于目标尺寸，否则会“只在目标内部产生局部对比”，把大块前景掏空。共享管线把邻域尺寸直接绑定到滑块的 <code>kernel</code> 参数，取值范围 <code>3…31</code>，因此无法通过界面传入选址所需的更大窗口。偏置 <code>C</code> 在管线里固定为 <code>3</code>，属于简化选择。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>Otsu, N. (1979). <em>A Threshold Selection Method from Gray-Level Histograms.</em> IEEE Trans. Systems, Man, and Cybernetics 9(1):62–66. DOI: <a href="https://doi.org/10.1109/TSMC.1979.4310076">10.1109/TSMC.1979.4310076</a>。</li>
+<li>OpenCV 官方文档（<code>threshold</code>、<code>adaptiveThreshold</code>、<code>THRESH_OTSU</code>），<a href="https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html">docs.opencv.org/4.x/d7/d1b</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/algorithms.py</code>（<code>otsu_manual</code>、<code>binary_threshold</code>）、<code>opencv_tutorial/pipeline.py</code>（<code>otsu</code>、<code>adaptive</code> 分支与 <code>reference_pixel_difference</code>）。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>；上一阶段：<a href="gradients.html">梯度与边缘</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  function gauss(x, m, s){ return Math.exp(-((x-m)*(x-m))/(2*s*s)) / (s*Math.sqrt(2*Math.PI)); }
+  var presets = {
+    separated: { parts: [[70,14,1],[190,16,1]], note: '两个峰相距约 120 个灰度级，谷底清晰。' },
+    overlap: { parts: [[110,30,1],[150,30,1]], note: '两峰几乎融合，双峰假设不成立。' },
+    imbalance: { parts: [[40,10,9],[200,12,1]], note: '低灰度类占比约 90%，统计量被大类主导。' }
+  };
+  function histogram(p){
+    var h = new Array(256).fill(0), x, i;
+    for (x = 0; x < 256; x++){
+      var v = 0;
+      for (i = 0; i < p.length; i++){ v += p[i][2] * gauss(x, p[i][0], p[i][1]); }
+      h[x] = v;
+    }
+    return h;
+  }
+  function otsu(h){
+    var total = 0, i;
+    for (i = 0; i < 256; i++) total += h[i];
+    var omega = 0, mu = 0, muT = 0, best = -1, bestT = 0;
+    for (i = 0; i < 256; i++) muT += i * h[i] / total;
+    for (i = 0; i < 256; i++){
+      omega += h[i] / total;
+      mu += i * h[i] / total;
+      var denom = omega * (1 - omega);
+      if (denom <= 0) continue;
+      var v = (muT * omega - mu) * (muT * omega - mu) / denom;
+      if (v > best){ best = v; bestT = i; }
+    }
+    return { t: bestT, variance: best };
+  }
+  var out = document.getElementById('otsu-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-preset]'));
+  function render(key){
+    var cfg = presets[key], h = histogram(cfg.parts), r = otsu(h);
+    out.textContent = '预设「' + key + '」：Otsu 阈值 t* = ' + r.t +
+      ' ｜ 最大类间方差 σ²_B = ' + r.variance.toFixed(1) +
+      ' ｜ ' + cfg.note;
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(btn.dataset.preset);
+    });
+  });
+  render('separated');
+})();
+</script>
+</body>
+</html>
