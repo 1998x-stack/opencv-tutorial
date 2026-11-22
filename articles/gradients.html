@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="梯度与边缘：Sobel 两个方向核、梯度幅值与方向，以及 Canny 的非极大抑制和双阈值滞后，附本仓库参考实现。">
+<title>梯度与边缘 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-size:.92rem;line-height:1.7}
+ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>梯度与边缘</strong><a href="#problem">01 · 问题</a><a href="#sobel">02 · Sobel 机制</a><a href="#math">03 · 公式与方向</a><a href="#canny">04 · Canny 四步</a><a href="#explore">05 · 观察两个方向</a><a href="#limits">06 · 边界与取舍</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段二 · 边缘</p>
+<h1>梯度与边缘</h1>
+<p class="dek">“边缘”不是像素的属性，而是灰度变化率的极值。本文从 Sobel 的两个方向核出发，说明梯度幅值与方向如何共同定义边缘，再看 Canny 如何把“所有梯度大的点”收敛成细而连续的线条。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么“梯度大”就等于“边缘”</h2>
+<p>物体边界处，灰度在很短的距离内剧烈变化；平坦区域几乎不变。把图像看成连续亮度函数 <code>I(x,y)</code>，边缘就是其梯度幅值较大的位置。离散图像没有解析导数，于是用差分近似：相邻像素之差就是局部斜率。Sobel 核不过是<strong>在求差分的同时做了一点平滑</strong>，让算子对噪声更稳健。</p>
+<p>但“梯度大”只是一个局部判断，直接阈值化会得到又粗又碎的边缘带。要得到教科书上那条一像素宽的细线，还需要非极大抑制；要抑制噪声引起的零星响应，还需要双阈值与滞后连接。这正是 Canny 要解决的问题。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-sob-title fig-sob-desc" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-sob-title">Sobel 两个方向核产生 Gx 与 Gy，再合成为幅值与方向</title>
+<desc id="fig-sob-desc">水平差分核作用于图像得到 Gx，垂直差分核得到 Gy；两者合成得到梯度幅值与方向。</desc>
+<rect width="680" height="300" rx="16" fill="#f3f9f6"/>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<rect x="30" y="118" width="120" height="64" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="90" y="150">灰度 I</text><text x="90" y="170" font-size="12" fill="#53676d">H×W</text>
+<rect x="250" y="52" width="130" height="58" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="315" y="78">横向差分</text><text x="315" y="98" font-size="12" fill="#53676d">→ Gx</text>
+<rect x="250" y="190" width="130" height="58" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="315" y="216">纵向差分</text><text x="315" y="236" font-size="12" fill="#53676d">→ Gy</text>
+<rect x="470" y="52" width="180" height="58" rx="10" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="560" y="78">幅值 + 方向</text><text x="560" y="98" font-size="12" fill="#53676d">|G|, θ</text>
+<rect x="470" y="190" width="180" height="58" rx="10" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/>
+<text x="560" y="216">非极大抑制 / 阈值</text><text x="560" y="236" font-size="12" fill="#53676d">得到细边缘</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#a3)">
+<path d="M150 140 C210 140 205 81 242 81"/><path d="M150 160 C210 160 205 219 242 219"/>
+<path d="M380 81 H462"/><path d="M380 219 H462"/><path d="M560 110 V182"/>
+</g>
+<defs><marker id="a3" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>Sobel 用两个 3×3 核分别估计水平差分 <code>Gx</code> 与垂直差分 <code>Gy</code>；它们合成为梯度幅值 <code>|G|</code> 与方向 <code>θ</code>。幅值决定“是不是边缘”，方向决定“边缘沿哪个方向”。实现见 <code>algorithms.py</code> 的 <code>sobel_manual</code>，共享管线额外保留 <code>horizontal_gradient</code> 与 <code>vertical_gradient</code> 两个中间阶段。</figcaption>
+</figure>
+</section>
+
+<section id="sobel" aria-labelledby="sobel-h">
+<h2 id="sobel-h">02 · Sobel 机制：差分 + 平滑</h2>
+<p>最朴素的水平差分是 <code>I(x+1,y) − I(x−1,y)</code>。Sobel 把它做成 3×3 核，并在垂直方向加了一组 <code>[1,2,1]</code> 的权重，于是<strong>差分的同时做了轻微的高斯状平滑</strong>，对单像素噪声更不敏感：</p>
+<div class="math-equation" role="group" aria-label="Sobel 水平与垂直核">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="Sobel 水平与垂直核矩阵，可横向滚动">
+<math display="block" aria-label="水平核 Gx 为第一行 -1 0 1，第二行 -2 0 2，第三行 -1 0 1；垂直核 Gy 是它的转置">
+<mrow>
+<msub><mi>K</mi><mi>x</mi></msub><mo>=</mo>
+<mfenced open="[" close="]"><mtable>
+<mtr><mtd><mn>−1</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>1</mn></mtd></mtr>
+<mtr><mtd><mn>−2</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>2</mn></mtd></mtr>
+<mtr><mtd><mn>−1</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>1</mn></mtd></mtr>
+</mtable></mfenced>
+<mspace width="2em"></mspace>
+<msub><mi>K</mi><mi>y</mi></msub><mo>=</mo>
+<msubsup><mi>K</mi><mi>x</mi><mo>⊤</mo></msubsup>
+</mrow>
+</math>
+</div>
+</div>
+<p class="note">这里的核与 <code>K</code> 的“相关”而非“卷积”约定一致：核不翻转。由于 <code>Kx</code> 是反对称的，如果错当成卷积（翻转核），<code>Gx</code> 会整体变号——方向恰好相反。这是把“相关”写成“卷积”时最常见的隐性错误。</p>
+<p>Sobel 核本身不归一化（权重和为 0），因此它输出的是有符号的差分值，量级随图像对比度变化，不能直接当作 0–255 的灰度图显示。</p>
+</section>
+
+<section id="math" aria-labelledby="math-h">
+<h2 id="math-h">03 · 公式与方向</h2>
+<p>两个方向的一阶导数分别由相应的核给出，梯度幅值取欧氏范数（即两个方向差的平方和开方）：</p>
+<div class="math-equation" role="group" aria-label="梯度幅值定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="梯度幅值公式，可横向滚动">
+<math display="block" aria-label="梯度幅值等于 Gx 平方加 Gy 平方的平方根">
+<mrow>
+<mrow><mo>|</mo><mi>G</mi><mo>|</mo></mrow><mo>=</mo>
+<msqrt><mrow><msup><msub><mi>G</mi><mi>x</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>G</mi><mi>y</mi></msub><mn>2</mn></msup></mrow></msqrt>
+</mrow>
+</math>
+</div>
+</div>
+<p>方向由两个分量的反正切给出，它指向灰度增长最快的方向（与边缘走向垂直）：</p>
+<div class="math-equation" role="group" aria-label="梯度方向定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="梯度方向公式，可横向滚动">
+<math display="block" aria-label="方向 theta 等于 Gy 除以 Gx 的反正切">
+<mrow>
+<mi>θ</mi><mo>=</mo><mo>arctan</mo>
+<mfenced><mfrac><msub><mi>G</mi><mi>y</mi></msub><msub><mi>G</mi><mi>x</mi></msub></mfrac></mfenced>
+</mrow>
+</math>
+</div>
+</div>
+<p>共享管线在计算幅值后把它线性拉伸到 0–255：<code>convertScaleAbs(magnitude, alpha=255 / max(magnitude.max(), 1))</code>。这个 <code>max(..., 1)</code> 防止平坦图像（幅值全为 0）出现除零。</p>
+</section>
+
+<section id="canny" aria-labelledby="canny-h">
+<h2 id="canny-h">04 · Canny：把梯度图收敛成细线</h2>
+<p>Canny 不是另一个“梯度算子”，而是一套<strong>流程</strong>。经典描述包含四步，OpenCV 的实现细节与此对应：</p>
+<ul class="plain">
+<li><strong>平滑</strong>：先用高斯滤波抑制噪声。共享管线把它显式暴露为 <code>smoothed</code> 阶段。</li>
+<li><strong>求导</strong>：用类 Sobel 的差分得到每个点的梯度幅值与方向。</li>
+<li><strong>非极大抑制</strong>：沿梯度方向比较相邻两点，只保留局部极大值——这一步把“边缘带”压成一像素宽的候选线。</li>
+<li><strong>双阈值 + 滞后</strong>：高于高阈值的是“强边缘”，低于低阈值的丢弃，介于两者之间且与强边缘相连的才保留。共享管线用 <code>threshold</code> 作为低阈值、<code>min(255, 2 × threshold)</code> 作为高阈值。</li>
+</ul>
+<figure>
+<svg role="img" aria-labelledby="fig-canny-title fig-canny-desc" viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-canny-title">Canny 的四个阶段与共享管线暴露的阶段图</title>
+<desc id="fig-canny-desc">灰度图先平滑，再求梯度，再做非极大抑制，最后经双阈值与滞后连接得到细边缘。</desc>
+<rect width="560" height="380" rx="16" fill="#f3f9f6"/>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<rect x="175" y="24" width="210" height="46" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/><text x="280" y="53">灰度图 gray</text>
+<rect x="175" y="96" width="210" height="46" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="280" y="119">① 高斯平滑</text><text x="280" y="136" font-size="11" fill="#53676d">stage: smoothed</text>
+<rect x="175" y="168" width="210" height="46" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/><text x="280" y="191">② 求梯度幅值 / 方向</text>
+<rect x="175" y="240" width="210" height="46" rx="10" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/><text x="280" y="269">③ 非极大抑制</text>
+<rect x="175" y="312" width="210" height="46" rx="10" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/><text x="280" y="335">④ 双阈值 + 滞后</text><text x="280" y="352" font-size="11" fill="#53676d">→ result 边缘图</text>
+<circle cx="140" cy="191" r="15" fill="#fff" stroke="#d06d4d" stroke-width="1.5"/><text x="140" y="196" font-size="11" fill="#d06d4d">θ</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#a4)">
+<path d="M280 70 V90"/><path d="M280 142 V162"/><path d="M280 214 V234"/><path d="M280 286 V306"/>
+</g>
+<defs><marker id="a4" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>Canny 的数据流：平滑 → 梯度 → 非极大抑制 → 双阈值与滞后连接。<code>θ</code> 只在非极大抑制阶段被使用，它回答“沿哪个方向找局部极大”。共享管线把第 ① 步显式暴露为 <code>smoothed</code>，并在调用 <code>cv2.Canny(softened, threshold, 2×threshold)</code> 时传入双阈值。实现见 <code>pipeline.py</code> 的 <code>canny</code> 分支。</figcaption>
+</figure>
+</section>
+
+<section id="explore" aria-labelledby="explore-h">
+<h2 id="explore-h">05 · 观察两个方向：谁对哪种边缘响应</h2>
+<p>点击下面的按钮，切换查看三个产物各自的含义。关键在于把“边缘方向”与“响应方向”对应起来：</p>
+<div class="control-row" role="group" aria-label="查看梯度产物">
+<button type="button" data-view="gx" aria-pressed="false">水平梯度 Gx</button>
+<button type="button" data-view="gy" aria-pressed="false">垂直梯度 Gy</button>
+<button type="button" data-view="mag" aria-pressed="true">幅值 |G|</button>
+</div>
+<p class="readout" id="grad-readout" aria-live="polite"></p>
+<p>把这三个产物分开看，能解释很多“为什么边缘断了”的疑问：如果一条竖直边缘只出现在 <code>Gx</code> 里，那用 <code>Gy</code> 去检测它自然会失败；而幅值图虽然同时包含两者，却仍然是一团有宽度的亮带，需要非极大抑制才能变细。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<h3>阈值怎么设</h3>
+<p>共享管线的双阈值是联动参数：低阈值取 <code>threshold</code>，高阈值取它的两倍（上限 255）。这避免了两个独立滑块互相矛盾。代价是<strong>无法单独调整高阈值</strong>，是教学上的简化，而不是工程最优。</p>
+<h3>失败模式</h3>
+<p>一是<strong>噪声未压住</strong>：如果直接把原始灰度送进求导，平坦区会出现大量孤立的高幅值点，Canny 的滞后连接会把它们串成假边缘。二是<strong>对比度过低</strong>：幅值整体很小，线性拉伸 <code>255 / max|G|</code> 会把噪声也一起放大；此时应该先改善成像或做直方图均衡，而不是继续调阈值。三是<strong>方向约定</strong>：非极大抑制依赖 <code>θ</code> 的量化，文档与实现若对角度定义不一致，会得到偏移一个像素的细边缘。</p>
+<p>一致性检查：当灰度图不超过 <code>400 000</code> 像素时，管线会计算 <code>gradient_max_error = max|Gx_opencv − Gx_manual|</code>，用来确认参考实现与 OpenCV 的差分方向一致。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>Canny, J. (1986). <em>A Computational Approach to Edge Detection.</em> IEEE Trans. Pattern Analysis and Machine Intelligence 8(6):679–698. DOI: <a href="https://doi.org/10.1109/TPAMI.1986.4767851">10.1109/TPAMI.1986.4767851</a>。</li>
+<li>OpenCV 官方文档（<code>Sobel</code>、<code>Canny</code>），<a href="https://docs.opencv.org/4.x/dd/d1a/group__imgproc__feature.html">docs.opencv.org/4.x/dd/d1a</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/algorithms.py</code>（<code>sobel_manual</code>）、<code>opencv_tutorial/pipeline.py</code>（<code>sobel</code> 与 <code>canny</code> 分支、<code>gradient_max_error</code>）。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>；上一阶段：<a href="convolution.html">卷积与高斯滤波</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var texts = {
+    gx: '水平梯度 Gx：由 Kx 对水平方向求差得到。它对竖直边缘（左右两侧灰度突变）响应强烈，在竖直边缘处出现正值一侧、负值一侧。',
+    gy: '垂直梯度 Gy：由 Ky（即 Kx 的转置）对垂直方向求差得到。它对水平边缘（上下灰度突变）响应强烈。',
+    mag: '幅值 |G| = √(Gx² + Gy²)：不论边缘朝向，只要灰度变化剧烈就产生大值。它是有符号分量的合成，因此总是非负，但仍是一条有宽度的亮带。'
+  };
+  var out = document.getElementById('grad-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      out.textContent = texts[btn.dataset.view] || '';
+    });
+  });
+  out.textContent = texts.mag;
+})();
+</script>
+</body>
+</html>
