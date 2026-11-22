@@ -121,6 +121,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 <li><a href="gradients.html">梯度与边缘</a><span>Sobel 两个方向核、梯度幅值，以及 Canny 的非极大抑制与双阈值滞后。</span></li>
 <li><a href="thresholding.html">阈值分割</a><span>Otsu 的类间方差推导，以及自适应阈值为什么要用局部邻域。</span></li>
 <li><a href="morphology.html">形态学与轮廓</a><span>开运算去除小噪点、闭运算连接断裂，以及轮廓计数为什么依赖阈值。</span></li>
+<li><a href="geometry.html">透视与文档矫正</a><span>透视畸变为什么不能靠滤波修复、四角检测的保守假设，以及单应变换与输出尺寸的取舍。</span></li>
 <li><a href="local-features.html">局部特征与匹配</a><span>ORB 关键点、汉明距离、Lowe 比值检验与 RANSAC 单应估计。</span></li>
 <li><a href="motion.html">运动检测</a><span>MOG2 背景建模、0/127/255 掩码语义与阴影抑制。</span></li>
 </ul>
@@ -142,7 +143,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 <h2 id="ref-h">05 · 参考文献与实现出处</h2>
 <ul>
 <li>OpenCV 官方文档 4.x：颜色空间转换与各算法语义，<a href="https://docs.opencv.org/4.x/">https://docs.opencv.org/4.x/</a>。</li>
-<li>本仓库参考实现：<code>opencv_tutorial/pipeline.py</code>（共享执行契约）、<code>opencv_tutorial/algorithms.py</code>（NumPy 参考算法）、<code>opencv_tutorial/curriculum.py</code>（24 周教学大纲的唯一来源）。</li>
+<li>本仓库参考实现：<code>opencv_tutorial/pipeline.py</code>（共享执行契约）、<code>opencv_tutorial/algorithms.py</code>（NumPy 参考算法）、<code>opencv_tutorial/geometry.py</code>（文档四角检测与单应矫正）、<code>opencv_tutorial/curriculum.py</code>（24 周教学大纲的唯一来源）。</li>
 <li>Otsu, N. (1979). <em>A Threshold Selection Method from Gray-Level Histograms.</em> IEEE Trans. Systems, Man, and Cybernetics 9(1):62–66. DOI: <a href="https://doi.org/10.1109/TSMC.1979.4310076">10.1109/TSMC.1979.4310076</a>。</li>
 </ul>
 <p class="note">文中出现的数值均来自本仓库代码或上述公开来源；没有出处的示意值会单独标注为“教学示意”。“24 周大纲”中标注 <code>planned</code> 的周次属于规划，不代表已完成。</p>
