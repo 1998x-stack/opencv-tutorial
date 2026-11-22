@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="卷积与高斯滤波：相关与卷积的区别、边界约定、可分离核与代价，逐段解释并附可运行的 NumPy 参考实现。">
+<title>卷积与高斯滤波 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+.readout{margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--border);border-radius:.7rem;background:white;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere;line-height:1.7}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td{border-bottom:1px solid var(--border);text-align:left;padding:.6rem;vertical-align:top}th{color:var(--subtle);font-weight:600}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+.math-equation{max-width:100%;min-width:0;margin:1.6rem 0;padding:.5rem 0;border-block:1px solid #dfe8e4}
+.math-scroll,[data-math-scroll]{display:block;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+.math-scroll:focus-visible,[data-math-scroll]:focus-visible{outline:3px solid #147f80;outline-offset:2px}
+.math-scroll math[display="block"],[data-math-scroll] math[display="block"]{width:max-content;min-width:100%;font-size:clamp(1.05rem,2.2vw,1.3rem);text-align:center}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}.math-scroll,[data-math-scroll]{overflow:visible}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>卷积与高斯滤波</strong><a href="#problem">01 · 问题</a><a href="#mechanism">02 · 机制</a><a href="#shape">03 · 公式与形状</a><a href="#code">04 · 可运行实现</a><a href="#weights">05 · 观察权重</a><a href="#limits">06 · 边界与代价</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段一 · 滤波</p>
+<h1>卷积与高斯滤波</h1>
+<p class="dek">局部加权求和是几乎所有视觉算法的底层操作。本文先厘清“相关”与“卷积”的区别，再说明高斯核为什么可以被拆成两次一维操作，最后用本仓库的 NumPy 参考实现验证它与 OpenCV 的一致性。</p>
+</header>
+
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 噪声为什么会污染后面每一步</h2>
+<p>假设你要找边缘。边缘在数学上是灰度的一阶导数峰值；求导会放大高频分量，而传感器的随机噪声恰恰也是高频。因此如果不先平滑，Sobel 或 Canny 会在平坦区域冒出大量假边缘。滤波这一段的存在理由，就是<strong>在求导之前压掉高频噪声，同时尽量不抹平真实结构</strong>。</p>
+<p>最简单的平滑是“取邻域平均”，但它有两个问题：一是会把边缘一起模糊掉，二是当邻域里有异常亮/暗的脉冲点时，平均值会被单点带偏。高斯核用距离加权的权重缓解了“平均核的各向同性问题”，而中值滤波则用排序统计直接对抗脉冲噪声。本文只讨论高斯。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-sep-title fig-sep-desc" viewBox="0 0 820 340" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-sep-title">高斯核的可分离性与两次一维卷积</title>
+<desc id="fig-sep-desc">一维权重向量的外积得到二维高斯核；图像先按行与一维核相关，再按列与一维核相关，得到与二维核直接相关相同的输出。</desc>
+<rect width="820" height="340" rx="16" fill="#f3f9f6"/>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<text x="130" y="36" font-size="15" fill="#53676d">1) 外积构造二维核</text>
+<rect x="55" y="58" width="150" height="40" rx="8" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="130" y="84">一维权重 g (k)</text>
+<text x="266" y="84" font-size="22" fill="#d06d4d">⊗</text>
+<rect x="322" y="58" width="150" height="40" rx="8" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="397" y="84">一维权重 g (k)</text>
+<text x="520" y="84" font-size="22" fill="#d06d4d">=</text>
+<rect x="560" y="52" width="60" height="52" rx="6" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="590" y="84">K (k×k)</text>
+<text x="130" y="140" font-size="15" fill="#53676d">2) 两次一维卷积等价于一次二维卷积</text>
+<rect x="48" y="164" width="150" height="70" rx="10" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="123" y="193">输入图像 I</text><text x="123" y="215" font-size="12" fill="#53676d">H×W</text>
+<rect x="336" y="164" width="150" height="70" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="411" y="193">逐行相关</text><text x="411" y="215" font-size="12" fill="#53676d">g 横向</text>
+<rect x="624" y="164" width="150" height="70" rx="10" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="699" y="193">逐列相关</text><text x="699" y="215" font-size="12" fill="#53676d">g 纵向</text>
+<text x="411" y="286" font-size="13" fill="#53676d">每一步都只是长度 k 的一维加权求和，代价从 O(k²) 降到 O(k)</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#a2)">
+<path d="M205 84 H256"/><path d="M477 84 H512"/><path d="M198 199 H328"/><path d="M486 199 H616"/>
+</g>
+<defs><marker id="a2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>可分离性：二维高斯核等于两个一维核的外积，<code>K(i,j)=g(i)·g(j)</code>。因此一次 <code>k×k</code> 的二维相关可以拆成“先横向、再纵向”两次一维相关。以 <code>k=5</code> 为例，每次输出像素的乘法次数从 <code>25</code> 降到 <code>10</code>（教学示意，用于说明阶数差异，非实测加速比）。实现见 <code>algorithms.py</code> 的 <code>gaussian_kernel</code>（用 <code>np.outer</code> 构造核）。</figcaption>
+</figure>
+</section>
+
+<section id="mechanism" aria-labelledby="mechanism-h">
+<h2 id="mechanism-h">02 · 核心机制：局部窗口的加权求和</h2>
+<p>滤波的骨架是“对每个输出位置，取输入的一个 <code>k×k</code> 邻域，与核逐元素相乘再求和”。这里有一个初学者几乎都会踩的坑：<strong>数学上的“卷积”会把核翻转 180°，而 OpenCV 与绝大多数计算机视觉代码实际做的是“相关”</strong>——核不翻转。对称核（如高斯、均值）两者结果相同，所以差异被掩盖；一旦换成 Sobel 这类非对称核，翻转与否会改变符号与方向。</p>
+<p>本仓库的参考实现刻意把这一点写进名字与文档里：<code>correlate2d</code> 明确声明“核不翻转（unlike mathematical convolution）”，并与 OpenCV 的边界约定对齐。</p>
+<h3>边界怎么处理</h3>
+<p>当窗口滑到图像边缘时，邻域会越界。OpenCV 默认使用 <code>BORDER_REFLECT_101</code>：图像边界不做重复，而是像镜面一样反射，且最外圈只出现一次（<code>gfedcb | abcdefgh | gfedcba</code>）。NumPy 中与之对应的填充模式正是 <code>mode="reflect"</code>（注意：不是会重复边界的 <code>symmetric</code>）。这一处对应关系决定了参考实现能否与 OpenCV 对齐。</p>
+</section>
+
+<section id="shape" aria-labelledby="shape-h">
+<h2 id="shape-h">03 · 公式与形状</h2>
+<p>相关运算定义为：输出位置 <code>(y,x)</code> 等于以该点为中心的窗口与核的内积，输出尺寸与输入相同（边界由填充补齐）：</p>
+<div class="math-equation" role="group" aria-label="二维相关定义">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="二维相关定义公式，可横向滚动">
+<math display="block" aria-label="输出 y x 等于对 i 与 j 求和的 I y+i x+j 乘 K i j">
+<mrow>
+<mo>(</mo><mi>I</mi><mo>*</mo><mi>K</mi><mo>)</mo><mo>(</mo><mi>y</mi><mo>,</mo><mi>x</mi><mo>)</mo>
+<mo>=</mo>
+<munder><mo>∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></munder>
+<mi>I</mi><mo>(</mo><mi>y</mi><mo>+</mo><mi>i</mi><mo>,</mo><mi>x</mi><mo>+</mo><mi>j</mi><mo>)</mo>
+<mo>·</mo>
+<mi>K</mi><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo>
+</mrow>
+</math>
+</div>
+</div>
+<p>其中 <code>i,j</code> 遍历 <code>[-⌊k/2⌋, ⌊k/2⌋]</code>。核的取值由一维高斯权重的外积给出，而一维权重先构造再归一化，保证总和为 1（否则整体亮度会漂移）：</p>
+<div class="math-equation" role="group" aria-label="一维高斯权重并归一化">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="一维高斯权重归一化公式，可横向滚动">
+<math display="block" aria-label="G x 等于 exp 负 x 平方除以 2 sigma 平方，再除以所有位置的 exp 之和">
+<mrow>
+<mi>G</mi><mo>(</mo><mi>x</mi><mo>)</mo><mo>=</mo>
+<mfrac>
+<mrow><mo>exp</mo><mo>(</mo><mo>−</mo><mfrac><msup><mi>x</mi><mn>2</mn></msup><mrow><mn>2</mn><msup><mi>σ</mi><mn>2</mn></msup></mrow></mfrac><mo>)</mo></mrow>
+<mrow><munder><mo>∑</mo><msup><mi>x</mi><mo>′</mo></msup></munder><mo>exp</mo><mo>(</mo><mo>−</mo><mfrac><msup><msup><mi>x</mi><mo>′</mo></msup><mn>2</mn></msup><mrow><mn>2</mn><msup><mi>σ</mi><mn>2</mn></msup></mrow></mfrac><mo>)</mo></mrow>
+</mfrac>
+</mrow>
+</math>
+</div>
+</div>
+<p>二维核由外积得到，这一步是可分离性的代数表述：</p>
+<div class="math-equation" role="group" aria-label="二维高斯核的可分离外积">
+<div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="二维核等于两个一维权重的外积，可横向滚动">
+<math display="block" aria-label="K i j 等于 G i 乘以 G j">
+<mrow><mi>K</mi><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo><mo>=</mo><mi>G</mi><mo>(</mo><mi>i</mi><mo>)</mo><mo>·</mo><mi>G</mi><mo>(</mo><mi>j</mi><mo>)</mo></mrow>
+</math>
+</div>
+</div>
+<p class="note">参数约束（来自 <code>gaussian_kernel</code> 的校验）：<code>size</code> 必须是 <code>[3,31]</code> 内的奇数，<code>sigma ∈ (0,20]</code>。越界会直接抛出 <code>ValueError</code>，而不是静默给出错误结果。</p>
+</section>
+
+<section id="code" aria-labelledby="code-h">
+<h2 id="code-h">04 · 可运行实现</h2>
+<p>参考实现用滑窗视图一次性取出所有邻域，再用 <code>einsum</code> 做批量内积。它刻意保持“慢而清晰”，目的是可读与可测，而不是性能：</p>
+<pre><code>from numpy.lib.stride_tricks import sliding_window_view
+
+def correlate2d(image, kernel):
+    k = np.asarray(kernel, dtype=np.float64)
+    py, px = k.shape[0] // 2, k.shape[1] // 2
+    padded = np.pad(image.astype(np.float64), ((py, py), (px, px)), mode="reflect")
+    windows = sliding_window_view(padded, k.shape)
+    return np.einsum("ijkl,kl->ij", windows, k, optimize=True)</code></pre>
+<p>要与 OpenCV 对比，只需把结果四舍五入并裁剪回 <code>uint8</code>：<code>clip(rint(correlate2d(...)), 0, 255)</code>。共享管线在灰度图不超过 <code>400 000</code> 像素时才会触发这一对照，并记录 <code>reference_mae</code>（与 <code>cv2.GaussianBlur</code> 的平均绝对误差）。<strong>该阈值是工程取舍</strong>：参考实现故意低效，所以只在小图上启用。</p>
+</section>
+
+<section id="weights" aria-labelledby="weights-h">
+<h2 id="weights-h">05 · 观察权重：σ 如何决定“看得多宽”</h2>
+<p>σ 控制权重衰减的速度。下面的读数用与参考实现相同的公式，在固定 <code>k=7</code> 下计算归一化后的中心一行权重：</p>
+<div class="control-row" role="group" aria-label="选择 sigma">
+<button type="button" data-sigma="0.8" aria-pressed="false">σ = 0.8</button>
+<button type="button" data-sigma="1.2" aria-pressed="true">σ = 1.2</button>
+<button type="button" data-sigma="2.0" aria-pressed="false">σ = 2.0</button>
+</div>
+<p class="readout" id="weight-readout" aria-live="polite"></p>
+<p>σ 越小，权重越集中在中心（接近恒等），平滑越弱；σ 越大，权重越平坦（接近均值滤波），平滑越强但边缘也越模糊。这解释了为什么调 σ 时“去噪”和“保边”是一对无法同时满足的取舍。</p>
+</section>
+
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与代价</h2>
+<h3>它能做什么，不能做什么</h3>
+<p>高斯滤波是线性、各向同性的低通滤波。它<strong>不能</strong>在去噪的同时保持锐利边缘——这是双边滤波等保边滤波器的动机；它也<strong>不能</strong>处理边界处的语义（例如“这是纸张边缘”），那属于后面的梯度与几何阶段。参考实现在图像尺寸超过 <code>8 000 000</code> 像素时会拒绝处理，属于显式上限而非性能问题。</p>
+<h3>失败模式</h3>
+<p>最常见的失败不是参数错，而是<strong>边界约定不一致</strong>：用 <code>mode="symmetric"</code> 或零填充去对齐 OpenCV 默认模式，会让图像最外圈产生系统性误差，并在后续求导时被放大成假边缘。第二个陷阱是忘记裁剪回 <code>uint8</code>，导致 <code>imshow</code> 显示全黑或全白。</p>
+</section>
+
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>OpenCV 官方文档（<code>GaussianBlur</code>、边界模式 <code>BORDER_REFLECT_101</code>），<a href="https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html">docs.opencv.org/4.x/d4/d86</a>。</li>
+<li>本仓库实现：<code>opencv_tutorial/algorithms.py</code>（<code>correlate2d</code>、<code>gaussian_kernel</code>、<code>gaussian_manual</code>）、<code>opencv_tutorial/pipeline.py</code>（对照指标 <code>reference_mae</code>）。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  function weights(size, sigma){
+    var c = Math.floor(size/2), w = [], s = 0, x;
+    for (x = -c; x <= c; x++) { var v = Math.exp(-(x*x)/(2*sigma*sigma)); w.push(v); s += v; }
+    return w.map(function(v){ return v/s; });
+  }
+  var out = document.getElementById('weight-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-sigma]'));
+  function render(sigma){
+    var w = weights(7, sigma);
+    var text = 'k=7, σ=' + sigma + ' ｜ 一维权重 = [ ' + w.map(function(v){ return v.toFixed(3); }).join(', ') + ' ]' +
+      '\n中心二维权重 K(0,0) = g(0)² = ' + (w[3]*w[3]).toFixed(4) + ' ｜ 权重总和 = ' + w.reduce(function(a,b){return a+b;},0).toFixed(3);
+    out.textContent = text;
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(btn.dataset.sigma);
+    });
+  });
+  render('1.2');
+})();
+</script>
+</body>
+</html>
