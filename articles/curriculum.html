@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="24 周计算机视觉教学大纲的单一事实来源：三个层级、实现状态、文章映射与每课完成门槛。">
+<title>24 周教学大纲 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+.card-list{list-style:none;padding:0;margin:1.2rem 0}.card-list li{margin:0 0 .8rem;padding:.9rem 1.05rem;border:1px solid var(--border);border-radius:.7rem;background:white}.card-list a{font-weight:600;text-decoration:none}.card-list span{display:block;color:var(--subtle);font-size:.88rem;margin-top:.2rem}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td{border-bottom:1px solid var(--border);text-align:left;padding:.6rem;vertical-align:top}th{color:var(--subtle);font-weight:600}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>24 周教学大纲</strong><a href="#problem">01 · 问题</a><a href="#levels">02 · 层级</a><a href="#status">03 · 状态</a><a href="#mapping">04 · 文章映射</a><a href="#gate">05 · 完成门槛</a><a href="#limits">06 · 边界</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段零 · 大纲</p>
+<h1>24 周教学大纲</h1>
+<p class="dek">算法文章解释“怎么算”，本文解释“按什么顺序学、哪些已经能跑”。大纲只有一个事实来源：<code>opencv_tutorial/curriculum.py</code>。网页、CLI 与 <code>lessons/</code> 都以它为准，避免三处各写一份而逐渐漂移。</p>
+</header>
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么大纲也需要“单一事实来源”</h2>
+<p>“24 周”很容易沦为一张口号式的路线图：README 里写一份、<code>lessons/</code> 里再手录一份、网页里又是第三份。三处只要有一处改动而另两处没跟上，读者看到的“第 9 周”就可能指向不同内容。仓库用一份代码消除这个风险：<code>opencv_tutorial/curriculum.py</code> 里的 <code>TRACKS</code> 是唯一事实来源，<code>get_curriculum()</code> 从它派生出周号、层级、主题、产出与实现状态。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-src-title fig-src-desc" viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-src-title">课程元数据的单一来源与三个消费者</title>
+<desc id="fig-src-desc">curriculum.py 的 TRACKS 被 get_curriculum 读取，分别供 CLI course 命令、网页 /api/curriculum 端点与 lessons 文件使用。</desc>
+<rect width="820" height="260" rx="16" fill="#f3f9f6"/>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<rect x="300" y="96" width="220" height="72" rx="12" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="410" y="126">curriculum.py</text><text x="410" y="148" font-size="12" fill="#53676d">TRACKS → get_curriculum()</text>
+<rect x="30" y="26" width="210" height="62" rx="12" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="135" y="52">CLI</text><text x="135" y="72" font-size="12" fill="#53676d">opencv-lab course</text>
+<rect x="580" y="26" width="210" height="62" rx="12" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="685" y="52">网页</text><text x="685" y="72" font-size="12" fill="#53676d">GET /api/curriculum</text>
+<rect x="30" y="176" width="210" height="62" rx="12" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="135" y="202">lessons/</text><text x="135" y="222" font-size="12" fill="#53676d">W01.md … W24.md</text>
+<rect x="580" y="176" width="210" height="62" rx="12" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="685" y="202">文章系列</text><text x="685" y="222" font-size="12" fill="#53676d">逐篇解释已实现周</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#cu)">
+<path d="M300 112 C240 90 200 70 246 58"/><path d="M520 112 C580 90 620 70 574 58"/><path d="M300 152 C240 168 200 190 246 206"/><path d="M520 152 C580 168 620 190 574 206"/>
+</g>
+<defs><marker id="cu" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>一个来源，四个消费者：相同的大纲数据同时驱动 CLI 命令、网页课程网格、<code>lessons/</code> 文件与本系列文章。改动只发生在一处（<code>TRACKS</code>），其余视图随之更新。<code>lessons/</code> 与文章是人工维护的派生视图，需与 <code>curriculum.py</code> 保持一致。</figcaption>
+</figure>
+</section>
+<section id="levels" aria-labelledby="levels-h">
+<h2 id="levels-h">02 · 三个层级：从像素到系统</h2>
+<p>大纲把 24 周分成三个 8 周层级（<code>TRACKS</code> 中的 <em>Beginner / Intermediate / Advanced</em>）。层级不是难度标签，而是<strong>依赖层次</strong>：上一层的产出是下一层的输入。</p>
+<table>
+<thead><tr><th>层级</th><th>周次</th><th>核心课题</th><th>阶段产出</th></tr></thead>
+<tbody>
+<tr><td>Beginner</td><td>W01–W08</td><td>像素与颜色、几何变换、卷积与去噪、梯度与边缘、阈值、形态学、形状几何</td><td>文档扫描器</td></tr>
+<tr><td>Intermediate</td><td>W09–W16</td><td>关键点、描述子与匹配、鲁棒几何、运动分割、光流、时序跟踪</td><td>全景拼接与视频分析</td></tr>
+<tr><td>Advanced</td><td>W17–W24</td><td>多视图几何、立体深度、视觉里程计、DNN 推理、C++ 内部、性能与评估</td><td>完整离线 CV 应用</td></tr>
+</tbody>
+</table>
+<p>这张表直接对应 <code>curriculum.py</code> 中 <code>TRACKS</code> 的三组条目；每一条还带有 <code>topics</code>（学习目标）与 <code>deliverable</code>（工程产出）两个字段，网页课程网格展示的正是这两项。</p>
+</section>
+<section id="status" aria-labelledby="status-h">
+<h2 id="status-h">03 · 状态：哪些周真能跑</h2>
+<p>每个周条目都带一个 <code>status</code>，它由 <code>get_curriculum()</code> 里一个显式白名单决定：只有周号属于 <code>(3,4,5,6,7,8,9,10,11,13)</code> 的条目才被标为 <code>implemented</code>，其余一律 <code>planned</code>。这是刻意保守的：标注 <code>planned</code> 的周<strong>不代表已完成</strong>，只代表它有目标与产出定义。</p>
+<table>
+<thead><tr><th>周</th><th>标题</th><th>工程产出</th></tr></thead>
+<tbody>
+<tr><td>W03</td><td>Convolution and denoising</td><td>从第一原理复现高斯滤波</td></tr>
+<tr><td>W04</td><td>Gradients and edges</td><td>可视化水平与垂直梯度</td></tr>
+<tr><td>W05</td><td>Thresholding</td><td>在光照不均下对比分割</td></tr>
+<tr><td>W06</td><td>Morphological processing</td><td>去噪并计数连通区域</td></tr>
+<tr><td>W07</td><td>Geometry and shapes</td><td>构建形状与面积测量</td></tr>
+<tr><td>W08</td><td>Project: document scanner</td><td>检测四角并矫正纸质文档</td></tr>
+<tr><td>W09</td><td>Keypoints</td><td>跨变换可视化稳定关键点</td></tr>
+<tr><td>W10</td><td>Descriptors and matching</td><td>度量旋转下的匹配质量</td></tr>
+<tr><td>W11</td><td>Robust geometry</td><td>从噪声对应中恢复变换</td></tr>
+<tr><td>W13</td><td>Motion segmentation</td><td>前景分割与失败案例分析</td></tr>
+</tbody>
+</table>
+<p class="note">未列入上表的周次（W01、W02、W12、W14–W24）均为 <code>planned</code>：它们有学习目标与工程产出定义，但尚未附带可运行示例与测试。阅读时请把“有定义”与“已完成”分开，这也是整个仓库对进度的公开口径。</p>
+<h3>按层级查看实现比例</h3>
+<div class="control-row" role="group" aria-label="选择课程层级">
+<button type="button" data-level="All" aria-pressed="true">全部</button>
+<button type="button" data-level="Beginner" aria-pressed="false">Beginner</button>
+<button type="button" data-level="Intermediate" aria-pressed="false">Intermediate</button>
+<button type="button" data-level="Advanced" aria-pressed="false">Advanced</button>
+</div>
+<p class="readout" id="level-readout" aria-live="polite"></p>
+</section>
+<section id="mapping" aria-labelledby="mapping-h">
+<h2 id="mapping-h">04 · 文章映射：已实现的周去哪里读</h2>
+<p>本系列文章并不逐周复述，而是按依赖关系把已实现的周归并成主题篇。下表把大纲周次与文章对应起来，方便从“大纲”跳到“原理”：</p>
+<ul class="card-list">
+<li><a href="convolution.html">卷积与高斯滤波</a><span>W03 · 相关与卷积、边界约定、可分离核。</span></li>
+<li><a href="gradients.html">梯度与边缘</a><span>W04 · Sobel 两方向核、梯度幅值与 Canny 滞后阈值。</span></li>
+<li><a href="thresholding.html">阈值分割</a><span>W05 · Otsu 的类间方差与自适应局部阈值。</span></li>
+<li><a href="morphology.html">形态学与轮廓</a><span>W06–W07 · 腐蚀/膨胀/开/闭、连通边界与轮廓计数。</span></li>
+<li><a href="geometry.html">透视与文档矫正</a><span>W08 · 四角检测、单应变换与输出尺寸。</span></li>
+<li><a href="local-features.html">局部特征与匹配</a><span>W09–W11 · ORB、汉明匹配、Lowe 比值与 RANSAC。</span></li>
+<li><a href="motion.html">运动检测</a><span>W13 · MOG2 背景建模、掩码语义与阴影抑制。</span></li>
+<li><a href="web-lab.html">交互式实验室</a><span>把上述算法放在同一个本地网页里观察。</span></li>
+</ul>
+</section>
+<section id="gate" aria-labelledby="gate-h">
+<h2 id="gate-h">05 · 每课的完成门槛</h2>
+<p>“讲完了”不等于“学完了”。每个 <code>lessons/W##.md</code> 文件都要求同一套五步实验流程，以及一个明确的完成门槛：</p>
+<ol>
+<li>推导或解释算法的数学目标与假设；</li>
+<li>构建确定性的合成测试例，记录输入尺寸与数据类型；</li>
+<li>在可行处用 NumPy 实现参考并与 OpenCV 对比；</li>
+<li>扫描关键参数，可视化中间输出并识别失败模式；</li>
+<li>至少写一个正确性测试，并对固定输入报告实测运行时间。</li>
+</ol>
+<p>完成门槛要求：可运行示例、结果图像、一个已记录的负面案例、测试输出与基准记录。缺少任何一项，该课不应当被标为完成——这与第 03 节的状态白名单是同一套逻辑。</p>
+<p>这套流程有一个直接后果：文章的“可运行实现”只需展示<strong>为了解释机制而必要的代码片段</strong>，而不必把整个仓库搬进来。完整的可运行入口是 CLI（<code>python -m opencv_tutorial …</code>）与本地实验室。</p>
+</section>
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">06 · 边界与取舍</h2>
+<p>这套大纲有一个需要读者注意的局限：<strong>实现状态是人工维护的白名单，而不是从测试自动推导</strong>。因此 <code>implemented</code> 描述的是“仓库当前附带了可运行示例与测试”的事实，而不是“你学完就能掌握”的保证。如果未来给某周补上实现，必须同步修改那个元组，否则网页与 CLI 会继续显示旧状态。</p>
+<p>其次是派生视图的漂移风险：<code>lessons/W##.md</code> 是人工生成的，它带有相同的标题、目标与产出，但不会因为 <code>curriculum.py</code> 变了而自动重建。日常检查方式是直接用 <code>opencv-lab course</code> 输出与文件对比。</p>
+<p>最后，高级阶段的多数条目仍属于规划。它们对应 <code>docs/roadmap.md</code> 里未勾选的任务（如立体匹配评估、ONNX 推理、C++ 内部）；看到 <code>planned</code> 就应当把它们当作路线图，而非已交付功能。</p>
+</section>
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>本仓库单一事实来源：<code>opencv_tutorial/curriculum.py</code>（<code>TRACKS</code>、<code>get_curriculum()</code> 与状态白名单）。</li>
+<li>派生视图与入口：<code>opencv_tutorial/cli.py</code>（<code>course</code> 命令）、<code>opencv_tutorial/server.py</code>（<code>/api/curriculum</code>）、<code>lessons/W01.md</code> … <code>lessons/W24.md</code>（五步实验流程与完成门槛）。</li>
+<li>进度口径：<code>docs/roadmap.md</code>（逐阶段验收清单）、<code>docs/testing.md</code>（测试与性能方法）。</li>
+<li>相关文章：<a href="index.html">从像素到理解</a>（总览）与 <a href="web-lab.html">交互式实验室</a>（本地运行方式）。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  var implemented = [3,4,5,6,7,8,9,10,11,13];
+  function level(w){ return w <= 8 ? 'Beginner' : w <= 16 ? 'Intermediate' : 'Advanced'; }
+  function isImpl(w){ return implemented.indexOf(w) >= 0; }
+  var out = document.getElementById('level-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-level]'));
+  function render(sel){
+    var weeks = [], i;
+    for (i = 1; i <= 24; i++) { if (sel === 'All' || level(i) === sel) weeks.push(i); }
+    var done = weeks.filter(isImpl);
+    var marks = weeks.map(function(w){ return (isImpl(w) ? '✓' : '·') + ('W' + String(w).padStart(2,'0')); }).join(' ');
+    out.textContent = sel + '：已实现 ' + done.length + ' / ' + weeks.length + '\n' + marks;
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(btn.dataset.level);
+    });
+  });
+  render('All');
+})();
+</script>
+</body>
+</html>
