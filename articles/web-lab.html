@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="离线交互式实验室：HTTP 端点、共享管线契约、上传边界与隐私设计，逐段解释并给出可检查的观察方法。">
+<title>交互式实验室 · 从像素到理解</title>
+<style>
+:root{color-scheme:light;--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#d06d4d;--structure:#7461ba;--annotation:#916c22;--border:#dce8e4;--surface:#f3f9f6;--max-reading:820px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-underline-offset:.17em}a:hover{color:var(--transform)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--ink);color:white;padding:.5rem 1rem;z-index:10}.skip-link:focus{top:1rem}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:4.25rem 2rem 8rem}
+.toc{position:sticky;top:2rem;align-self:start;font-size:.83rem;line-height:1.55;max-height:calc(100vh - 4rem);overflow:auto}
+.toc strong{display:block;font-size:.85rem;letter-spacing:.08em;margin-bottom:.9rem}.toc a{display:block;text-decoration:none;color:var(--subtle);border-left:2px solid var(--border);padding:.4rem .75rem}.toc a:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+main{min-width:0}article{max-width:var(--max-reading);margin:0 auto;min-width:0}
+.article-header{padding-top:.5rem;padding-bottom:1rem}.kicker{font-size:.78rem;letter-spacing:.22em;color:var(--subtle);text-transform:uppercase}.article-header h1{font-size:clamp(2.1rem,4.8vw,3.5rem);line-height:1.12;letter-spacing:-.03em;margin:.5rem 0 1.15rem}.dek{font-size:clamp(1.06rem,2vw,1.26rem);line-height:1.65;color:var(--subtle)}
+section{scroll-margin-top:2rem;margin-top:4.25rem}h2{font-size:clamp(1.5rem,2.9vw,1.95rem);line-height:1.4;margin:0 0 1.35rem}h3{font-size:1.2rem;line-height:1.5;margin:2.1rem 0 .7rem}
+p{margin:1rem 0}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{font-size:.89em}pre{padding:1.1rem;background:#1c3037;color:#e7f5ef;border-radius:.8rem;overflow:auto;line-height:1.6;font-size:.86rem}
+figure{margin:2.1rem 0;padding:1.15rem;border:1px solid var(--border);border-radius:1rem;background:white}figure svg{width:100%;height:auto;display:block}figcaption{font-size:.83rem;line-height:1.7;color:var(--subtle);border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+.note{margin:1.6rem 0;padding:.9rem 1.1rem;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 .5rem .5rem 0;font-size:.95rem}
+.control-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}button{font:inherit;font-size:.9rem;cursor:pointer;padding:.5rem .8rem;border:1px solid var(--border);border-radius:.5rem;background:white;color:var(--ink)}button[aria-pressed="true"]{background:var(--accent);color:white;border-color:var(--accent)}
+.status{min-height:1.5em;color:var(--accent);font-weight:600}
+.card-list{list-style:none;padding:0;margin:1.2rem 0}.card-list li{margin:0 0 .8rem;padding:.9rem 1.05rem;border:1px solid var(--border);border-radius:.7rem;background:white}.card-list a{font-weight:600;text-decoration:none}.card-list span{display:block;color:var(--subtle);font-size:.88rem;margin-top:.2rem}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td{border-bottom:1px solid var(--border);text-align:left;padding:.6rem;vertical-align:top}th{color:var(--subtle);font-weight:600}
+.math-inline{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",serif;vertical-align:-.05em}
+@media(max-width:900px){.layout{display:block;padding:2rem 1.2rem 5rem}.toc{position:static;max-height:none;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1rem}.toc a{display:inline-block;border-left:0;border-bottom:2px solid transparent;margin-right:.35rem;padding:.4rem .3rem}}
+@media(max-width:480px){body{font-size:16px}.layout{padding:1.3rem 1rem 4rem}figure{padding:.6rem}section{margin-top:3.25rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:black;font-size:11pt}.layout{display:block;padding:0}.toc,.control-row,.skip-link{display:none!important}article{max-width:none}figure{break-inside:avoid}a{color:#164e54}section{margin-top:1.6rem}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">跳转至正文</a>
+<div class="layout">
+<nav class="toc" aria-label="文章目录"><strong>交互式实验室</strong><a href="#problem">01 · 问题</a><a href="#mechanism">02 · 机制</a><a href="#flow">03 · 数据流</a><a href="#offline">04 · 离线与隐私</a><a href="#limits">05 · 边界与失败</a><a href="#observe">06 · 观察什么</a><a href="#references">07 · 参考文献</a></nav>
+<main id="content"><article>
+<header class="article-header">
+<p class="kicker">阶段四 · 实验室</p>
+<h1>交互式实验室</h1>
+<p class="dek">前面几篇文章都在讲算法本身；本文解释承载它们的那个本地网页。它用一条 HTTP 端点把共享管线暴露给浏览器，让"结果图 / 中间阶段 / 参考误差"可以在同一次请求里被观察——同时把上传限制、离线绑定与隐私边界讲清楚。</p>
+</header>
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">01 · 为什么算法文章之外还要一个“实验室”</h2>
+<p>读算法文章时，参数只能靠想象：σ 从 1.2 调到 2.0，输出现场是什么样？Canny 的两个阈值改变后会多出多少条边？更关键的是，文章里说的“参考实现与 OpenCV 一致”，读者无法当场验证。把管线做成一个可点击的观察台，就是让这些问题有<strong>即时反馈</strong>，而不是让读者盲信文字。</p>
+<p>实验室的设计目标有三条，且都对应仓库里可检查的实现：<strong>参数可调且结果即时回传</strong>、<strong>中间产物与最终结果并列可见</strong>、<strong>与参考实现的差异被量化显示</strong>。它不是一个新算法，而是把 <code>pipeline.py</code> 已经返回的 <code>stages</code> 与 <code>metrics</code> 直接渲染出来。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-flow-title fig-flow-desc" viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-flow-title">浏览器与本地服务的请求-响应数据流</title>
+<desc id="fig-flow-desc">浏览器把图片编码为 base64 JSON，POST 到 /api/process；服务端解码、校验、调用 run_pipeline，再以 PNG data URL 返回各阶段图像与指标；浏览器渲染对比与阶段画廊。</desc>
+<rect width="820" height="300" rx="16" fill="#f3f9f6"/>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<rect x="24" y="40" width="180" height="96" rx="12" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.5"/>
+<text x="114" y="74">浏览器</text><text x="114" y="97" font-size="12" fill="#53676d">上传 / 合成样本</text><text x="114" y="117" font-size="12" fill="#53676d">base64 data URL</text>
+<rect x="320" y="40" width="180" height="96" rx="12" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="410" y="74">LabHandler</text><text x="410" y="97" font-size="12" fill="#53676d">POST /api/process</text><text x="410" y="117" font-size="12" fill="#53676d">解码 + 校验</text>
+<rect x="616" y="40" width="180" height="96" rx="12" fill="#ffecd9" stroke="#d06d4d" stroke-width="1.5"/>
+<text x="706" y="74">run_pipeline</text><text x="706" y="97" font-size="12" fill="#53676d">stages + metrics</text><text x="706" y="117" font-size="12" fill="#53676d">单一算法</text>
+<rect x="320" y="196" width="180" height="72" rx="12" fill="#f6efd9" stroke="#916c22" stroke-width="1.5"/>
+<text x="410" y="226">JSON 响应</text><text x="410" y="248" font-size="12" fill="#53676d">PNG data URL + 指标</text>
+</g>
+<g stroke="#147f80" stroke-width="4" fill="none" marker-end="url(#fl)">
+<path d="M204 88 H312"/><path d="M500 88 H608"/><path d="M706 136 C706 176 540 176 500 210"/><path d="M320 224 C250 224 180 200 140 140"/>
+</g>
+<defs><marker id="fl" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#147f80"/></marker></defs>
+<text x="410" y="288" font-size="13" text-anchor="middle" fill="#53676d">一次请求只运行一个算法；结果、阶段与指标同时返回，浏览器不重算任何像素</text>
+</svg>
+<figcaption>请求-响应数据流：浏览器只负责编码与渲染，所有像素运算都在服务端由 <code>run_pipeline</code> 完成。响应中的 <code>images</code> 是各阶段图的 PNG data URL，<code>metrics</code> 是运行时与参考一致性指标。实现见 <code>server.py</code> 的 <code>process_payload</code> 与 <code>web/app.js</code> 的 <code>runExperiment</code>。</figcaption>
+</figure>
+<section id="mechanism" aria-labelledby="mechanism-h">
+<h2 id="mechanism-h">02 · 核心机制：一个进程，一个端点</h2>
+<p>实验室由标准库的 <code>ThreadingHTTPServer</code> 提供，不依赖任何 Web 框架，也不需要联网。启动方式与 CLI 一致：</p>
+<pre><code>python -m opencv_tutorial serve --host 127.0.0.1 --port 8765
+# OpenCV Lab at http://127.0.0.1:8765</code></pre>
+<p>服务端只定义少量端点，每个端点都只做一件可预期的事：</p>
+<table>
+<caption class="visually-hidden" style="position:absolute;left:-9999px">实验室 HTTP 端点</caption>
+<thead><tr><th>方法 / 路径</th><th>返回</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>GET /api/health</code></td><td><code>{status, opencv}</code></td><td>存活检查与 OpenCV 版本</td></tr>
+<tr><td><code>GET /api/catalog</code></td><td><code>ALGORITHMS</code> 字典</td><td>侧边栏的算法列表与描述</td></tr>
+<tr><td><code>GET /api/curriculum</code></td><td><code>get_curriculum()</code></td><td>24 周课程网格</td></tr>
+<tr><td><code>GET /api/sample</code></td><td><code>{image}</code> data URL</td><td>确定性的合成样本图</td></tr>
+<tr><td><code>POST /api/process</code></td><td><code>{images, metrics}</code></td><td>运行一个算法并回传全部阶段</td></tr>
+<tr><td><code>GET / /style.css /app.js</code></td><td>静态文件</td><td>白名单内的前端资源</td></tr>
+</tbody>
+</table>
+<p>关键的一点是：<strong>网页并没有自己的算法实现</strong>。侧边栏算法列表直接来自 <code>pipeline.py</code> 的 <code>ALGORITHMS</code>，处理请求直接调用同一个 <code>run_pipeline</code>。因此 CLI、基准测试与网页三者在语义上不会漂移——修好一处，三处一起变。</p>
+<p class="note">用 FastAPI/Flask 等框架重写这段服务并不改变算法结论；它反过来会增加依赖面，与“离线优先”的目标相冲。因此这里选择标准库，代价是需要自己处理请求上限与错误分支（见第 05 节）。</p>
+</section>
+<section id="flow" aria-labelledby="flow-h">
+<h2 id="flow-h">03 · 数据流：图片怎么跨过进程边界</h2>
+<p>网页与算法在不同的进程里，图片必须被序列化成文本。浏览器用 <code>readAsDataURL</code> 把上传文件读成 <code>data:image/png;base64,…</code> 形式的字符串，连同参数一起放进 JSON；服务端则按相反顺序还原：</p>
+<h3>解码：五道检查，任何一道不过就拒绝</h3>
+<ol>
+<li>载荷必须是字符串，且长度不超过 <code>2 × MAX_REQUEST</code>；</li>
+<li>若带 <code>data:</code> 前缀，必须包含 <code>;base64,</code>；</li>
+<li><code>base64.b64decode(validate=True)</code> 严格解码，非法字符直接报错；</li>
+<li>解码后的字节数不超过 <code>MAX_REQUEST</code>（8 MiB）；</li>
+<li><code>cv2.imdecode</code> 必须能成功，且像素数不超过 <code>8 000 000</code>。</li>
+</ol>
+<p>这五道检查都对应一个具体的失败原因，而不是笼统的“上传失败”。任何一步驳回，服务端回 <code>400</code> 并在 <code>error</code> 字段里给出原因（截断到 300 字符）。</p>
+<h3>编码：PNG data URL + 指标</h3>
+<p>管线把每个阶段图用 <code>cv2.imencode(".png", …)</code> 压成 PNG，再转成 data URL。响应形如 <code>{"images": {name: dataURL}, "metrics": {…}}</code>。因为 <code>metrics</code> 里只有普通数字、字符串与整数，序列化时用 <code>allow_nan=False</code> 可以把 NaN/Infinity 直接变成报错，避免前端静默拿到非法值。</p>
+</section>
+<section id="offline" aria-labelledby="offline-h">
+<h2 id="offline-h">04 · 离线与隐私：默认只在本机</h2>
+<p>服务默认绑定 <code>127.0.0.1:8765</code>，而不是 <code>0.0.0.0</code>。这意味着同一局域网内的其他机器默认也访问不到它；<code>serve(host, port)</code> 的两个参数只在显式传入时才会改变这一点。</p>
+<ul class="card-list">
+<li><strong>无外部依赖</strong><span>算法在本地由 NumPy 与 OpenCV 执行；页面不请求任何 CDN、字体或分析脚本，断网可用。</span></li>
+<li><strong>不持久化上传</strong><span>上传的图片只在内存中解码与处理，不以文件形式写入磁盘；关闭进程即消失。</span></li>
+<li><strong>响应不可缓存</strong><span>JSON 响应带 <code>Cache-Control: no-store</code>，避免处理结果被浏览器或中间层缓存。</span></li>
+<li><strong>资源白名单</strong><span>静态文件只提供 <code>/</code>、<code>/style.css</code>、<code>/app.js</code> 三项，其余路径一律 404，不提供目录遍历。</span></li>
+<li><strong>嗅探防护</strong><span>所有响应带 <code>X-Content-Type-Options: nosniff</code>。</span></li>
+</ul>
+<p class="note">这是<strong>本地学习工具</strong>，不是面向公网的加固服务。仓库明确声明：未经鉴权、限流、隔离与运维审查，不要把它绑定到公网接口。本文讨论的所有“安全边界”都以本机模型为前提。</p>
+</section>
+<section id="limits" aria-labelledby="limits-h">
+<h2 id="limits-h">05 · 边界与失败模式</h2>
+<p>自建 HTTP 服务意味着逐个显式处理失败分支。下面是这段代码里真实存在的拒绝条件，以及它们各自对应的状态码：</p>
+<table>
+<thead><tr><th>条件</th><th>状态码</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>请求长度 &lt;1 或 &gt;8 MiB</td><td><code>413</code></td><td>请求过大或为空</td></tr>
+<tr><td><code>Content-Type</code> 不是 <code>application/json</code></td><td><code>415</code></td><td>不支持的媒体类型</td></tr>
+<tr><td>JSON 不是对象 / 解码失败</td><td><code>400</code></td><td>请求体非法</td></tr>
+<tr><td>图片非法或超过 8 MP</td><td><code>400</code></td><td>解码或尺寸校验失败</td></tr>
+<tr><td>未知路径</td><td><code>404</code></td><td>不在白名单内</td></tr>
+</tbody>
+</table>
+<p>还有两个容易被忽略的行为。其一，<strong>上传文件大小在浏览器侧就有一道预检</strong>：非图片类型与超过 5 MB 的文件不会发请求，直接提示。其二，<strong>参考一致性检查只在小图上执行</strong>：当灰度图不超过 <code>400 000</code> 像素时，管线才会调用 NumPy 参考实现并记录 <code>reference_mae</code> 等指标；大图下这些字段缺失，前端显示 <code>N/A</code>。因此 <code>elapsed_ms</code> 在某些算法上包含了可选的参考对比，它<strong>不是</strong>纯 OpenCV 优化后的耗时（参见 <code>docs/testing.md</code> 的已知限制）。</p>
+<p>最后一个边界属于设计本身：<strong>一次请求只运行一个算法</strong>。想要对比两种算法，需要发两次请求，或者在文章里看各自的中间产物。这保持了请求的确定性，代价是前端不提供“多算法并行对比”。</p>
+</section>
+<section id="observe" aria-labelledby="observe-h">
+<h2 id="observe-h">06 · 观察什么：三个读数对应三类问题</h2>
+<p>全面板右侧只展示三个读数，它们分别回答三个不同层面的问题，而不是堆砌所有指标：</p>
+<table>
+<thead><tr><th>读数</th><th>字段</th><th>回答的问题</th></tr></thead>
+<tbody>
+<tr><td>执行时间</td><td><code>elapsed_ms</code></td><td>这次处理花了多久（毫秒）</td></tr>
+<tr><td>图像分辨率</td><td><code>width × height</code></td><td>处理的是多大的图（来自灰度图）</td></tr>
+<tr><td>参考检查</td><td>见下</td><td>与 OpenCV/参考实现的差异是多少</td></tr>
+</tbody>
+</table>
+<p>“参考检查”具体显示哪个字段，取决于当前算法：高斯用 <code>reference_mae</code>（与 <code>cv2.GaussianBlur</code> 的平均绝对误差），Sobel 用 <code>gradient_max_error</code>（与手写水平梯度的最大误差），Otsu 用 <code>reference_pixel_difference</code>（与 <code>cv2.threshold(THRESH_OTSU)</code> 不一致的像素数）与 <code>selected_threshold</code>（选中的阈值）。其余算法没有参考实现，显示“N/A”。</p>
+<p>读取这些数时不要把“小”直接当成“快”：参考对比本身在计时区间内，所以当 <code>reference_mae</code> 出现时，<code>elapsed_ms</code> 会偏高。要比较算法真实速度，请用 <code>python -m opencv_tutorial benchmark</code>，它复用相同输入并报告中位数与 P95。</p>
+<h3>现场算一算：上传会在 JSON 里膨胀多少</h3>
+<p>选择不同的原始文件大小，看 base64 编码后的长度如何变化（base64 把每 3 字节编成 4 个字符）：</p>
+<div class="control-row" role="group" aria-label="选择原始文件大小">
+<button type="button" data-bytes="204800" aria-pressed="false">200 KB</button>
+<button type="button" data-bytes="1048576" aria-pressed="true">1 MB</button>
+<button type="button" data-bytes="5242880" aria-pressed="false">5 MB</button>
+</div>
+<p class="readout" id="size-readout" aria-live="polite"></p>
+<p class="note">结论：base64 会把字节数放大到约 <code>4/3</code>，再加上 <code>data:</code> 前缀与 JSON 外壳，一个刚好达到浏览器预检上限（5 MB）的文件，编码后已接近 7 MB，距服务端 8 MiB 的请求上限只剩不多余量。这就是为什么两侧的限额需要一起看，而不能只看其中一个。</p>
+</section>
+<section id="references" aria-labelledby="ref-h">
+<h2 id="ref-h">07 · 参考文献与实现出处</h2>
+<ul>
+<li>OpenCV 官方文档 4.x（图像编解码 <code>imencode</code>/<code>imdecode</code>、各算法语义），<a href="https://docs.opencv.org/4.x/">https://docs.opencv.org/4.x/</a>。</li>
+<li>Python 标准库 <a href="https://docs.python.org/3/library/http.server.html"><code>http.server</code></a> 与 <a href="https://docs.python.org/3/library/base64.html"><code>base64</code></a>（本服务的运行基础与编码规则）。</li>
+<li>本仓库实现：<code>opencv_tutorial/server.py</code>（端点、上传边界、静态白名单）、<code>opencv_tutorial/pipeline.py</code>（共享契约与参考指标）、<code>web/app.js</code>（前端请求与渲染）、<code>docs/testing.md</code>（集成与性能测试说明）。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>；算法原理见本系列其余六篇。</li>
+</ul>
+</section>
+</article></main>
+</div>
+<script>
+(function(){
+  function bytesToBase64(n){ return Math.ceil(n/3)*4; }
+  function human(n){ return (n/1048576).toFixed(2) + ' MiB'; }
+  var out = document.getElementById('size-readout');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-bytes]'));
+  function render(n){
+    var encoded = bytesToBase64(n);
+    var withPrefix = encoded + 22; /* data:image/...;base64, ~22 字符前缀，教学示意 */
+    out.textContent = '原始 ' + human(n) + ' ｜ base64 长度 ' + encoded + ' 字符（' + human(encoded) + '）\n' +
+      '含 data URL 前缀约 ' + human(withPrefix) + ' ｜ 服务端上限 8.00 MiB → ' +
+      (withPrefix <= 8*1048576 ? '通过' : '将被 413 拒绝') + ' ｜ 浏览器预检上限 5.00 MiB → ' +
+      (n <= 5*1048576 ? '通过' : '本地拦截');
+  }
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render(Number(btn.dataset.bytes));
+    });
+  });
+  render(1048576);
+})();
+</script>
+</body>
+</html>
