@@ -71,6 +71,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 </svg>
 <figcaption>请求-响应数据流：浏览器只负责编码与渲染，所有像素运算都在服务端由 <code>run_pipeline</code> 完成。响应中的 <code>images</code> 是各阶段图的 PNG data URL，<code>metrics</code> 是运行时与参考一致性指标。实现见 <code>server.py</code> 的 <code>process_payload</code> 与 <code>web/app.js</code> 的 <code>runExperiment</code>。</figcaption>
 </figure>
+</section>
 <section id="mechanism" aria-labelledby="mechanism-h">
 <h2 id="mechanism-h">02 · 核心机制：一个进程，一个端点</h2>
 <p>实验室由标准库的 <code>ThreadingHTTPServer</code> 提供，不依赖任何 Web 框架，也不需要联网。启动方式与 CLI 一致：</p>
@@ -164,7 +165,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 <li>OpenCV 官方文档 4.x（图像编解码 <code>imencode</code>/<code>imdecode</code>、各算法语义），<a href="https://docs.opencv.org/4.x/">https://docs.opencv.org/4.x/</a>。</li>
 <li>Python 标准库 <a href="https://docs.python.org/3/library/http.server.html"><code>http.server</code></a> 与 <a href="https://docs.python.org/3/library/base64.html"><code>base64</code></a>（本服务的运行基础与编码规则）。</li>
 <li>本仓库实现：<code>opencv_tutorial/server.py</code>（端点、上传边界、静态白名单）、<code>opencv_tutorial/pipeline.py</code>（共享契约与参考指标）、<code>web/app.js</code>（前端请求与渲染）、<code>docs/testing.md</code>（集成与性能测试说明）。</li>
-<li>路径总览：<a href="index.html">从像素到理解</a>；算法原理见本系列其余六篇。</li>
+<li>路径总览：<a href="index.html">从像素到理解</a>；算法原理见本系列其余七篇。</li>
 </ul>
 </section>
 </article></main>
