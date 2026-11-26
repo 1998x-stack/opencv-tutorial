@@ -135,6 +135,22 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 </table>
 <p>还有两个容易被忽略的行为。其一，<strong>上传文件大小在浏览器侧就有一道预检</strong>：非图片类型与超过 5 MB 的文件不会发请求，直接提示。其二，<strong>参考一致性检查只在小图上执行</strong>：当灰度图不超过 <code>400 000</code> 像素时，管线才会调用 NumPy 参考实现并记录 <code>reference_mae</code> 等指标；大图下这些字段缺失，前端显示 <code>N/A</code>。因此 <code>elapsed_ms</code> 在某些算法上包含了可选的参考对比，它<strong>不是</strong>纯 OpenCV 优化后的耗时（参见 <code>docs/testing.md</code> 的已知限制）。</p>
 <p>最后一个边界属于设计本身：<strong>一次请求只运行一个算法</strong>。想要对比两种算法，需要发两次请求，或者在文章里看各自的中间产物。这保持了请求的确定性，代价是前端不提供“多算法并行对比”。</p>
+<h3>可运行验证</h3>
+<p>上面这些端点和边界不是口头约定，而是被集成测试真实调用的。测试会在一个临时端口上启动 <code>LabHandler</code>，依次请求健康检查、课程表和首页，再 POST 一张编码后的合成图：</p>
+<pre><code>with urlopen(live + "/api/health") as r:
+    assert json.load(r)["status"] == "ok"
+with urlopen(live + "/api/curriculum") as r:
+    assert len(json.load(r)) == 24
+with urlopen(live + "/") as r:
+    assert b"VISION" in r.read()
+
+image = encode_image(make_sample(160, 128))
+req = Request(live + "/api/process",
+              json.dumps({"image": image, "algorithm": "otsu"}).encode(),
+              {"Content-Type": "application/json"}, method="POST")
+with urlopen(req) as r:
+    assert json.load(r)["metrics"]["algorithm"] == "otsu"</code></pre>
+<p>编码/解码的往返同样被断言：<code>np.testing.assert_array_equal(decode_image(encode_image(original)), original)</code>，而非法 payload（<code>"data:image/png;base64,not-valid"</code>）必须抛出 <code>ValueError</code>。运行方式：<code>pytest tests/test_server_and_motion.py -k "roundtrip or http_endpoints"</code>。测试用 <code>ThreadingHTTPServer(("127.0.0.1", 0), LabHandler)</code> 绑定 0 号端口，因此不会占用文档里写的固定 <code>8765</code>，也不会与本地在跑的服务冲突。</p>
 </section>
 <section id="observe" aria-labelledby="observe-h">
 <h2 id="observe-h">06 · 观察什么：三个读数对应三类问题</h2>
