@@ -156,6 +156,18 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <p>一是<strong>结构元过大</strong>：开运算会把本该保留的细小目标一并删除，闭运算会把相邻目标粘成一个。结构元尺寸必须小于目标、大于噪声，而这两者之间未必总有安全区间。二是<strong>顺序敏感</strong>：先闭后开与先开后闭结果不同；本仓库固定为先开后闭（先去噪再补洞），这个顺序是一种工程选择，换任务可能需要调换。三是<strong>继承阈值误差</strong>：形态学与轮廓都建立在二值图上，阈值偏差会原样传递，无法被后续步骤修复。</p>
 <h3>能做什么，不能做什么</h3>
 <p>形态学是几何/拓扑层面的清理工具，它<strong>不理解语义</strong>：它无法区分“该保留的小目标和该删除的噪点”，因为它只看形状与尺寸。把轮廓数当检测数、或把形态学当成万能去噪，都是常见的过度解读。</p>
+<h3>可运行验证</h3>
+<p>开运算与闭运算都走共享管线，因此受同一条执行契约约束。仓库的 <code>test_all_pipeline_algorithms</code> 对每个算法键做参数化断言；当 <code>name</code> 取 <code>morphology</code> 时，它同时确认画幅不变、数据类型正确，以及中间阶段被命名暴露：</p>
+<pre><code>from opencv_tutorial.algorithms import make_sample
+from opencv_tutorial.pipeline import run_pipeline
+
+image = make_sample(224, 160)
+result = run_pipeline(image, "morphology")          # kernel=5, threshold=120
+assert result.image.shape[:2] == image.shape[:2]   # 形态学不改变画幅
+assert result.image.dtype == np.uint8
+assert {"original", "grayscale", "binary", "opening"} &lt;= set(result.stages)
+assert result.metrics["algorithm"] == "morphology"</code></pre>
+<p>运行方式：<code>pytest tests/test_algorithms.py -k morphology</code>（参数化用例的 id 里带算法名）。其中 <code>binary</code> 与 <code>opening</code> 两个阶段由 <code>pipeline.py</code> 的 <code>morphology</code> 分支显式写入 <code>stages</code>，所以那行集合断言实际上在核对“先二值化、再开运算”的执行顺序是否被如实暴露。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
