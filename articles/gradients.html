@@ -181,6 +181,14 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <h3>失败模式</h3>
 <p>一是<strong>噪声未压住</strong>：如果直接把原始灰度送进求导，平坦区会出现大量孤立的高幅值点，Canny 的滞后连接会把它们串成假边缘。二是<strong>对比度过低</strong>：幅值整体很小，线性拉伸 <code>255 / max|G|</code> 会把噪声也一起放大；此时应该先改善成像或做直方图均衡，而不是继续调阈值。三是<strong>方向约定</strong>：非极大抑制依赖 <code>θ</code> 的量化，文档与实现若对角度定义不一致，会得到偏移一个像素的细边缘。</p>
 <p>一致性检查：当灰度图不超过 <code>400 000</code> 像素时，管线会计算 <code>gradient_max_error = max|Gx_opencv − Gx_manual|</code>，用来确认参考实现与 OpenCV 的差分方向一致。</p>
+<h3>可运行验证</h3>
+<p>“参考 Sobel 与 OpenCV 逐点一致”这句话本身可以被断言，而不必凭肉眼比较两张图。下面这段取自本仓库 <code>tests/test_algorithms.py</code>：它固定随机种子生成灰度图，分别核对两个方向的差分，并检查幅值确实等于两分量的欧氏范数。</p>
+<pre><code>image = np.random.default_rng(6).integers(0, 256, size=(50, 64), dtype=np.uint8)
+gx, gy, magnitude = sobel_manual(image)
+np.testing.assert_allclose(gx, cv2.Sobel(image, cv2.CV_64F, 1, 0))
+np.testing.assert_allclose(gy, cv2.Sobel(image, cv2.CV_64F, 0, 1))
+np.testing.assert_allclose(magnitude, np.hypot(gx, gy))</code></pre>
+<p>运行方式：<code>pytest tests/test_algorithms.py -k test_sobel_gradient_reference</code>。因为 <code>assert_allclose</code> 默认只容忍相对误差 <code>1e-7</code>，一旦把 <code>Kx</code> 当成卷积去翻转核，<code>gx</code> 就会整体变号，这条断言会立刻失败——这正是“相关 vs 卷积”差别的可执行证据。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
