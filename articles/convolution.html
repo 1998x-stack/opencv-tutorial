@@ -168,6 +168,13 @@ def correlate2d(image, kernel):
 <p>高斯滤波是线性、各向同性的低通滤波。它<strong>不能</strong>在去噪的同时保持锐利边缘——这是双边滤波等保边滤波器的动机；它也<strong>不能</strong>处理边界处的语义（例如“这是纸张边缘”），那属于后面的梯度与几何阶段。参考实现在图像尺寸超过 <code>8 000 000</code> 像素时会拒绝处理，属于显式上限而非性能问题。</p>
 <h3>失败模式</h3>
 <p>最常见的失败不是参数错，而是<strong>边界约定不一致</strong>：用 <code>mode="symmetric"</code> 或零填充去对齐 OpenCV 默认模式，会让图像最外圈产生系统性误差，并在后续求导时被放大成假边缘。第二个陷阱是忘记裁剪回 <code>uint8</code>，导致 <code>imshow</code> 显示全黑或全白。</p>
+<h3>可运行验证</h3>
+<p>“相关核与 OpenCV 的 <code>filter2D</code> 在 <code>BORDER_REFLECT_101</code> 下逐点一致”是一条可执行的等式。测试用固定种子的灰度图和一个反对称核（正是 Sobel 的 <code>Kx</code>）来比较：</p>
+<pre><code>kernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=float)
+got = correlate2d(image, kernel)
+ref = cv2.filter2D(image, cv2.CV_64F, kernel, borderType=cv2.BORDER_REFLECT_101)
+np.testing.assert_allclose(got, ref, atol=1e-8)</code></pre>
+<p>运行方式：<code>pytest tests/test_algorithms.py -k test_correlation_matches_opencv</code>，其中 <code>image</code> 是 <code>np.random.default_rng(12).integers(0, 256, size=(31, 43), dtype=np.uint8)</code>。同一文件里的 <code>test_gaussian_kernel_and_reference</code> 还断言 <code>gaussian_kernel(5, 1.2)</code> 关于中心对称、权重和约为 <code>1</code>，并验证 <code>gaussian_manual</code> 与 <code>cv2.GaussianBlur</code> 的平均绝对误差小于 <code>1.0</code>——这正是管线中 <code>reference_mae</code> 的来源。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
