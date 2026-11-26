@@ -169,6 +169,13 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <p>一是<strong>单峰直方图</strong>：没有真正的两类，Otsu 仍会返回一个阈值并把图像切成两半，但切法没有语义。二是<strong>光照不均</strong>：全局统计被照度梯度主导，需换自适应阈值。三是<strong>噪声</strong>：二值化前若不做滤波，孤立噪点会变成孤立的前景斑块——这正好是下一阶段（形态学）要清理的对象。</p>
 <h3>自适应阈值的注意点</h3>
 <p>邻域尺寸 <code>kernel</code> 必须为奇数且足够大于目标尺寸，否则会“只在目标内部产生局部对比”，把大块前景掏空。共享管线把邻域尺寸直接绑定到滑块的 <code>kernel</code> 参数，取值范围 <code>3…31</code>，因此无法通过界面传入选址所需的更大窗口。偏置 <code>C</code> 在管线里固定为 <code>3</code>，属于简化选择。</p>
+<h3>可运行验证</h3>
+<p>“自研 Otsu 与 OpenCV 得到同一个阈值”同样是一条可断言的等式。测试用两段高斯分布的合成样本拼出一张有明确双峰的灰度图（<code>normal(50, 9)</code> 与 <code>normal(195, 12)</code> 各 4000 点，裁到 0–255 后排成 80×100；这些是测试的合成参数，不是真实拍摄的指标），再分别比较阈值与二值化结果。</p>
+<pre><code>threshold = otsu_manual(image)
+cv_threshold, ref = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+assert threshold == int(cv_threshold)
+np.testing.assert_array_equal(binary_threshold(image, threshold), ref)</code></pre>
+<p>运行方式：<code>pytest tests/test_algorithms.py -k test_otsu_matches_opencv</code>。阈值是整数，用 <code>==</code> 直接比较；二值图则用 <code>assert_array_equal</code> 逐像素比较。若把类间方差的权重写错（例如忘记按总像素数归一化），这两条断言都会失败。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
