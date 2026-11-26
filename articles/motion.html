@@ -173,6 +173,19 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <p><code>MotionDetector</code> 的构造参数有显式校验：<code>history ≥ 2</code>、<code>threshold &gt; 0</code>、<code>min_area ≥ 1</code>；<code>learning_rate</code> 只接受 <code>-1</code> 或 <code>[0, 1]</code>，否则抛出 <code>ValueError</code>。这些校验把“无效配置”变成显式错误，而不是静默运行。</p>
 <h3>能做什么，不能做什么</h3>
 <p>它输出的是<strong>像素级变化区域与包围盒</strong>，而不是“目标身份”。同一物体跨帧不携带 ID，因此无法回答“这是不是刚才那个人”。要跟踪身份，需要在这个输出之上再加关联与滤波（属于课程后续的跟踪阶段）。</p>
+<h3>可运行验证</h3>
+<p>“静止背景不产生前景”与“出现目标就报出一个区域”这两条行为由测试直接断言。它先用 25 帧空场景把背景模型预热到稳定，再插入一个白色矩形：</p>
+<pre><code>detector = MotionDetector(history=20, min_area=30)
+background = np.zeros((100, 120, 3), dtype=np.uint8)
+for _ in range(25):
+    result = detector.step(background)
+assert np.count_nonzero(result.mask) == 0
+
+active = background.copy()
+cv2.rectangle(active, (35, 30), (75, 70), (255, 255, 255), -1)
+result = detector.step(active, learning_rate=0)
+assert len(result.boxes) &gt;= 1</code></pre>
+<p>运行方式：<code>pytest tests/test_server_and_motion.py -k test_motion_detector_suppresses_stationary_background</code>。第二次 <code>step</code> 传 <code>learning_rate=0</code> 冻结背景更新，避免这个新出现的矩形在检测当下就被写进背景模型；如果预热帧数不足，或把 <code>varThreshold</code> 调得过低而放大噪声，第一条 <code>count_nonzero(mask) == 0</code> 会先失败。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
