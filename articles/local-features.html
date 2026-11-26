@@ -174,6 +174,21 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <p>一是<strong>重复纹理</strong>：火柴盒、砖墙、棋盘等局部外观高度相似，比值检验会把它们全部判为模糊而丢弃，或留下大量错误匹配。二是<strong>视角变化过大</strong>：局部外观随之改变，描述子不再稳定。三是<strong>候选不足</strong>：<code>match_orb</code> 要求至少 4 对候选才估计单应，否则返回 <code>H = None</code> 且 <code>inliers = 0</code>——这是显式的失败信号，而不是异常。</p>
 <h3>参数范围</h3>
 <p><code>max_features</code> 被限制在 <code>[50, 10000]</code>，越界会抛出 <code>ValueError</code>。特征数太少会导致候选不足；太多则拖慢匹配且引入更多弱特征。预览图只绘制前 <code>80</code> 条匹配，属于显示上限，不影响统计。</p>
+<h3>可运行自检</h3>
+<p>上文提到的常量都不是示意值，而是 <code>features.py</code> 里写死的：比值检验用 <code>0.75</code>、RANSAC 重投影阈值用 <code>3.0</code>、至少 <code>4</code> 对候选才估计单应。下面这段自检调用仓库函数，断言几条代码自身承诺的性质（与具体检测到多少关键点无关）：把同一张确定性合成图与自身匹配，最近邻就是同源描述子，因此几何验证会进入 RANSAC 分支。</p>
+<pre><code>from opencv_tutorial.algorithms import make_sample
+from opencv_tutorial.features import match_orb
+
+r = match_orb(make_sample(240, 180), make_sample(240, 180))
+print(r.candidate_matches, r.inliers)     # 实际候选/内点数，取决于 ORB 检测结果
+assert r.inliers &lt;= r.candidate_matches          # 内点不可能多于候选
+assert r.homography is None or r.homography.shape == (3, 3)
+try:
+    match_orb(make_sample(240, 180), make_sample(240, 180), max_features=10)
+    raise AssertionError("越界应抛 ValueError")
+except ValueError:
+    pass</code></pre>
+<p>运行方式：在仓库根目录直接 <code>python</code> 执行。注意仓库当前还没有为 <code>match_orb</code> 写 pytest 用例，所以这段自检是供你手动运行的，不是既有测试套件的一部分；它只检查“内点不超候选”“单应矩阵为 3×3”“参数越界报错”这些由代码保证的结构性质，不预设关键点数量。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
