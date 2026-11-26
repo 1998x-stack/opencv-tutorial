@@ -193,7 +193,15 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <p>前面提到输出长宽取对边较大者。若文档本身是 A4 比例，但拍摄时发生了强烈透视，两条“水平”边长度不等，取 <code>max</code> 会让矫正结果<strong>略微拉伸</strong>。要得到透视正确的比例，需要已知真实长宽比或相机内参（如 Zhang 的平面标定方法），那超出本仓库的合成数据范围。</p>
 <h3>不做去卷曲，也不重建内容</h3>
 <p>单应只能处理平面到平面的映射。纸张弯折属于<strong>非刚性形变</strong>，需要曲面模型或逐行去畸变；本模块一概不处理。矫正后的图像也只是几何重采样，缺失的像素不会被“补出来”。</p>
-<p>一致性检查：在合成场景下，<code>tests/test_algorithms.py::test_warp_document_corners</code> 造出一个矩形白块，断言 <code>detect_document</code> 能返回四角、<code>warp_document</code> 的输出不小于 <code>110×150</code>、且均值大于 <code>200</code>（即白纸仍占主导）。这是对“能检测、能矫正、没把内容翻掉”的最小回归保障。</p>
+<p>一致性检查：在合成场景下，<code>tests/test_algorithms.py::test_warp_document_corners</code> 造出一个矩形白块，断言 <code>detect_document</code> 能返回四角、<code>warp_document</code> 的输出不小于 <code>110×150</code>、且均值大于 <code>200</code>（即白纸仍占主导）。这是对“能检测、能矫正、没把内容翻掉”的最小回归保障。下面是它的核心断言：</p>
+<pre><code>image = np.zeros((180, 260, 3), dtype=np.uint8)
+cv2.rectangle(image, (45, 30), (210, 150), (240, 240, 240), -1)
+corners = detect_document(image)
+assert corners is not None
+result = warp_document(image, corners)
+assert result.shape[0] &gt;= 110 and result.shape[1] &gt;= 150
+assert result.mean() &gt; 200</code></pre>
+<p>运行方式：<code>pytest tests/test_algorithms.py -k test_warp_document_corners</code>。<code>110</code> 与 <code>150</code> 是<strong>下界</strong>而非精确值：检测到的四角随阈值与轮廓略有浮动，取对边最大值后的输出尺寸也随之浮动，所以断言用的是 <code>&gt;=</code>；同一测试还单独断言 <code>order_corners</code> 能把乱序的四个点排成 <code>(4, 2)</code> 形状。</p>
 </section>
 
 <section id="references" aria-labelledby="ref-h">
