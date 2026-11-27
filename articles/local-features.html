@@ -79,6 +79,31 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <section id="orb" aria-labelledby="orb-h">
 <h2 id="orb-h">02 · 核心机制：二进制描述子 + 汉明距离</h2>
 <p>ORB 不做浮点描述子，而是把每个关键点周围若干像素对的亮度比较结果编码成<strong>一个 256 位的比特串</strong>：若某对像素中第一个比第二个亮，该位为 1，否则为 0。这样描述子的比较只需按位异或再数 1 的个数——这就是汉明距离。它的代价极低，且对整体亮度变化不敏感，因为只用了“谁更亮”的相对关系。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-ham-title fig-ham-desc" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-ham-title">汉明距离：两个二进制描述子逐位异或后统计 1 的个数</title>
+<desc id="fig-ham-desc">把两个描述子对齐逐位比较，不同的位异或结果为 1，相同的位为 0，1 的总数就是汉明距离。</desc>
+<rect width="700" height="280" rx="16" fill="#f3f9f6"/>
+<text x="350" y="30" font-size="14" text-anchor="middle" fill="#147f80">汉明距离 = 描述子 a 与 b 不同的位数（Σ [aₖ ≠ bₖ]）</text>
+<g fill="#f6efd9"><rect x="92" y="70" width="32" height="152"/><rect x="156" y="70" width="32" height="152"/><rect x="220" y="70" width="32" height="152"/></g>
+<g font-size="14" text-anchor="middle" fill="#203035">
+<text x="46" y="97">a</text>
+<rect x="60" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/><rect x="92" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/><rect x="124" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/><rect x="156" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/><rect x="188" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/><rect x="220" y="76" width="32" height="32" fill="#d6f1eb" stroke="#147f80"/>
+<text x="76" y="97">1</text><text x="108" y="97">0</text><text x="140" y="97">1</text><text x="172" y="97">1</text><text x="204" y="97">0</text><text x="236" y="97">1</text>
+<text x="46" y="147">b</text>
+<rect x="60" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/><rect x="92" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/><rect x="124" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/><rect x="156" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/><rect x="188" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/><rect x="220" y="126" width="32" height="32" fill="#ebe5ff" stroke="#7461ba"/>
+<text x="76" y="147">1</text><text x="108" y="147">1</text><text x="140" y="147">1</text><text x="172" y="147">0</text><text x="204" y="147">0</text><text x="236" y="147">0</text>
+<text x="40" y="207" font-size="12" fill="#53676d">a ⊕ b</text>
+<rect x="60" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/><rect x="92" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/><rect x="124" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/><rect x="156" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/><rect x="188" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/><rect x="220" y="186" width="32" height="32" fill="#fffdf9" stroke="#d06d4d"/>
+<text x="76" y="207">0</text><text x="108" y="207">1</text><text x="140" y="207">0</text><text x="172" y="207">1</text><text x="204" y="207">0</text><text x="236" y="207">1</text>
+</g>
+<text x="290" y="92" font-size="13" fill="#53676d">逐位对齐比较</text>
+<text x="290" y="145" font-size="13" fill="#53676d">相同的位 → 0，不同的位 → 1</text>
+<text x="290" y="205" font-size="13" fill="#53676d">1 的个数 = 汉明距离 = 3</text>
+<text x="60" y="252" font-size="12" fill="#53676d">（示意：实际描述子为 256 位，黄色列为发生差异的位）</text>
+</svg>
+<figcaption>汉明距离是可逐位验算的：把两个描述子对齐后逐位比较，位相同得 0、不同得 1，异或结果中 1 的个数就是距离（图中 6 位示意得到 3）。实际描述子是 256 位，因此距离范围是 0–256。<code>cv2.BFMatcher</code> 的 <code>NORM_HAMMING</code> 做的就是“异或 + 数 1”，比浮点描述子的欧氏距离快得多。实现见 <code>opencv_tutorial/features.py</code> 的 <code>match_orb</code>。</figcaption>
+</figure>
 <p>“k 近邻 + 比值检验”是一对搭档。为查询描述子找到最近的两个候选后，如果最近的与次近的<strong>都同样近</strong>，说明这个点的判别力不足（很可能只是重复纹理），应当丢弃。这比设一个绝对距离阈值更稳健，因为它随描述子的可区分程度自适应。</p>
 <figure>
 <svg role="img" aria-labelledby="fig-ratio-title fig-ratio-desc" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg">
