@@ -157,6 +157,34 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 <h3>把四个点摆成一致的顺序</h3>
 <p><code>getPerspectiveTransform</code> 对点的顺序<strong>极其敏感</strong>——把左上错配成右上，会得到翻转或扭曲的结果。为此 <code>order_corners</code> 先绕质心按角度排序：<code>arctan2(y−cy, x−cx)</code>，对凸四边形这会得到沿边一圈的顺序；再整体旋转，使 <code>x + y</code> 最小的点落到首位，即左上角。这样四点的排列稳定为<strong>左上、右上、右下、左下</strong>。</p>
 <p>该函数还有两道保险：输入必须是恰好 <code>4</code> 个有限点，否则抛 <code>ValueError</code>；排序后的多边形面积若小于 <code>1</code> 像素（退化四边形），同样报错。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-order-title fig-order-desc" viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-order-title">order_corners 把乱序四角整理为固定顺序</title>
+<desc id="fig-order-desc">左图是乱序输入的四个角点，绕质心按极角排序后再旋转，使左上角落到首位，得到右图固定的左上、右上、右下、左下顺序。</desc>
+<rect width="680" height="250" rx="16" fill="#f3f9f6"/>
+<polygon points="75,55 215,75 205,195 60,175" fill="#ebe5ff" stroke="#7461ba" stroke-width="1.8"/>
+<g stroke="#916c22" stroke-width="1" stroke-dasharray="4 4"><line x1="138" y1="125" x2="75" y2="55"/><line x1="138" y1="125" x2="215" y2="75"/><line x1="138" y1="125" x2="205" y2="195"/><line x1="138" y1="125" x2="60" y2="175"/></g>
+<circle cx="138" cy="125" r="4" fill="#916c22"/>
+<g font-size="12" text-anchor="middle">
+<circle cx="75" cy="55" r="9" fill="#fff" stroke="#d06d4d"/><text x="75" y="59" fill="#d06d4d">P2</text>
+<circle cx="215" cy="75" r="9" fill="#fff" stroke="#d06d4d"/><text x="215" y="79" fill="#d06d4d">P0</text>
+<circle cx="205" cy="195" r="9" fill="#fff" stroke="#d06d4d"/><text x="205" y="199" fill="#d06d4d">P3</text>
+<circle cx="60" cy="175" r="9" fill="#fff" stroke="#d06d4d"/><text x="60" y="179" fill="#d06d4d">P1</text>
+</g>
+<text x="138" y="238" font-size="12" fill="#53676d" text-anchor="middle">输入：顺序不保证</text>
+<g stroke="#147f80" stroke-width="3.5" fill="none" marker-end="url(#ao)"><path d="M250 125 H320"/></g>
+<text x="285" y="115" font-size="11" fill="#147f80" text-anchor="middle">order_corners</text>
+<polygon points="415,55 555,75 545,195 400,175" fill="#d6f1eb" stroke="#147f80" stroke-width="1.8"/>
+<circle cx="415" cy="55" r="5" fill="#d06d4d"/><circle cx="555" cy="75" r="5" fill="#d06d4d"/><circle cx="545" cy="195" r="5" fill="#d06d4d"/><circle cx="400" cy="175" r="5" fill="#d06d4d"/>
+<g font-size="12" fill="#203035">
+<text x="415" y="45" text-anchor="middle">TL</text><text x="566" y="70" text-anchor="start">TR</text>
+<text x="545" y="215" text-anchor="middle">BR</text><text x="391" y="180" text-anchor="end">BL</text>
+</g>
+<text x="478" y="238" font-size="12" fill="#53676d" text-anchor="middle">输出：TL→TR→BR→BL</text>
+<defs><marker id="ao" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption><code>order_corners</code> 的两步定序：先绕质心按极角 <code>arctan2(y−cy, x−cx)</code> 排序，把凸四边形的顶点摆成一圈的先后顺序；再整体旋转，使 <code>x+y</code> 最小的顶点落到首位，即左上角。于是无论输入四点以何种顺序给出，输出都固定为<strong>左上、右上、右下、左下</strong>。左图的 <code>P0…P3</code> 只是示意“输入顺序不可依赖”，并非实现内部的编号。</figcaption>
+</figure>
 <h3>输出矩形取多长多宽</h3>
 <p>输出尺寸由两条对边的较大长度决定，而不是任取一条：</p>
 <div class="math-equation" role="group" aria-label="输出宽度与高度的定义">
