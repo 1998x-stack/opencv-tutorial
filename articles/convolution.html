@@ -90,6 +90,39 @@ table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.2rem 0}th,td
 <h2 id="mechanism-h">02 · 核心机制：局部窗口的加权求和</h2>
 <p>滤波的骨架是“对每个输出位置，取输入的一个 <code>k×k</code> 邻域，与核逐元素相乘再求和”。这里有一个初学者几乎都会踩的坑：<strong>数学上的“卷积”会把核翻转 180°，而 OpenCV 与绝大多数计算机视觉代码实际做的是“相关”</strong>——核不翻转。对称核（如高斯、均值）两者结果相同，所以差异被掩盖；一旦换成 Sobel 这类非对称核，翻转与否会改变符号与方向。</p>
 <p>本仓库的参考实现刻意把这一点写进名字与文档里：<code>correlate2d</code> 明确声明“核不翻转（unlike mathematical convolution）”，并与 OpenCV 的边界约定对齐。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-corr-title fig-corr-desc" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-corr-title">相关运算：一个输出像素是窗口与核的逐元素乘积之和</title>
+<desc id="fig-corr-desc">取输入的 3×3 窗口与 3×3 核逐元素相乘再求和，得到输出图对应位置的单个像素值。</desc>
+<rect width="700" height="260" rx="16" fill="#f3f9f6"/>
+<text x="350" y="30" font-size="14" text-anchor="middle" fill="#147f80">输出 (y,x) = Σ 窗口 I · 核 K（核不翻转）</text>
+<g font-size="13" text-anchor="middle" fill="#203035">
+<rect x="30" y="80" width="90" height="90" fill="#fffdf9" stroke="#dce8e4"/>
+<rect x="60" y="110" width="30" height="30" fill="#ffecd9" stroke="#d06d4d"/>
+<text x="45" y="99">0</text><text x="75" y="99">0</text><text x="105" y="99">0</text>
+<text x="45" y="129">0</text><text x="75" y="129">160</text><text x="105" y="129">0</text>
+<text x="45" y="159">0</text><text x="75" y="159">0</text><text x="105" y="159">0</text>
+</g>
+<text x="75" y="200" font-size="12" text-anchor="middle" fill="#53676d">输入窗口 I（3×3）</text>
+<g font-size="13" text-anchor="middle" fill="#203035">
+<rect x="250" y="80" width="90" height="90" fill="#fffdf9" stroke="#dce8e4"/>
+<text x="265" y="99">1</text><text x="295" y="99">2</text><text x="325" y="99">1</text>
+<text x="265" y="129">2</text><text x="295" y="129">4</text><text x="325" y="129">2</text>
+<text x="265" y="159">1</text><text x="295" y="159">2</text><text x="325" y="159">1</text>
+</g>
+<text x="295" y="200" font-size="12" text-anchor="middle" fill="#53676d">核 K（未归一化，Σ = 16）</text>
+<rect x="470" y="110" width="50" height="50" fill="#d6f1eb" stroke="#147f80" stroke-width="1.5"/>
+<text x="495" y="141" font-size="14" text-anchor="middle" fill="#203035">40</text>
+<text x="495" y="200" font-size="12" text-anchor="middle" fill="#53676d">输出中心像素</text>
+<g stroke="#d06d4d" stroke-width="3.5" fill="none" marker-end="url(#ac)">
+<path d="M126 125 H244"/><path d="M346 125 H464"/>
+</g>
+<text x="185" y="116" font-size="12" text-anchor="middle" fill="#53676d">逐元素相乘</text>
+<text x="405" y="116" font-size="12" text-anchor="middle" fill="#53676d">求和 ÷ 16</text>
+<defs><marker id="ac" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#d06d4d"/></marker></defs>
+</svg>
+<figcaption>相关的局部机制：取输入中以 <code>(y,x)</code> 为中心的 <code>k×k</code> 窗口，与核逐元素相乘再求和，得到输出的单个像素。示例用未归一化的 3×3 核（权重和 16）：只有中心一个像素 <code>160</code> 非零时，输出为 <code>4·160 ÷ 16 = 40</code>——单个亮点被摊薄，正是“平滑”在像素层面的表现。实际实现会先把核归一化到和为 1（见下文），此处保留未归一化数值以便看清乘法过程；图中数值为教学示意。</figcaption>
+</figure>
 <h3>边界怎么处理</h3>
 <p>当窗口滑到图像边缘时，邻域会越界。OpenCV 默认使用 <code>BORDER_REFLECT_101</code>：图像边界不做重复，而是像镜面一样反射，且最外圈只出现一次（<code>gfedcb | abcdefgh | gfedcba</code>）。NumPy 中与之对应的填充模式正是 <code>mode="reflect"</code>（注意：不是会重复边界的 <code>symmetric</code>）。这一处对应关系决定了参考实现能否与 OpenCV 对齐。</p>
 </section>
