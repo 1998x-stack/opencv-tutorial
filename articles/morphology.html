@@ -102,6 +102,38 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 </div>
 </div>
 <p>直观理解：腐蚀让前景“变瘦”，能抹掉比结构元窄的结构；膨胀让前景“变胖”，能连接断裂并填小洞。两者都<strong>不可逆</strong>——腐蚀后再膨胀不能恢复被抹掉的信息。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-erode-title fig-erode-desc" viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-erode-title">腐蚀的局部规则：结构元完全落入前景才输出 1</title>
+<desc id="fig-erode-desc">在 5×5 的二值输入上放置一个 3×3 全 1 结构元，只有当结构元覆盖的邻域全部为前景时，中心输出像素才为 1，否则为 0。</desc>
+<rect width="700" height="250" rx="16" fill="#f3f9f6"/>
+<text x="350" y="30" font-size="14" text-anchor="middle" fill="#147f80">腐蚀 A ⊖ B：结构元 B 完全落入前景 A 时，输出中心为 1</text>
+<rect x="30" y="54" width="130" height="130" fill="#fffdf9" stroke="#dce8e4"/>
+<g fill="#203035">
+<rect x="56" y="80" width="26" height="26"/><rect x="82" y="80" width="26" height="26"/><rect x="108" y="80" width="26" height="26"/>
+<rect x="56" y="106" width="26" height="26"/><rect x="82" y="106" width="26" height="26"/><rect x="108" y="106" width="26" height="26"/>
+<rect x="56" y="132" width="26" height="26"/><rect x="82" y="132" width="26" height="26"/><rect x="108" y="132" width="26" height="26"/>
+</g>
+<rect x="56" y="80" width="78" height="78" fill="none" stroke="#147f80" stroke-width="2.5" stroke-dasharray="6 4"/>
+<text x="95" y="205" font-size="12" text-anchor="middle" fill="#53676d">输入 A（3×3 前景块）</text>
+<rect x="250" y="80" width="78" height="78" fill="#fffdf9" stroke="#dce8e4"/>
+<g fill="#7461ba">
+<rect x="250" y="80" width="26" height="26"/><rect x="276" y="80" width="26" height="26"/><rect x="302" y="80" width="26" height="26"/>
+<rect x="250" y="106" width="26" height="26"/><rect x="276" y="106" width="26" height="26"/><rect x="302" y="106" width="26" height="26"/>
+<rect x="250" y="132" width="26" height="26"/><rect x="276" y="132" width="26" height="26"/><rect x="302" y="132" width="26" height="26"/>
+</g>
+<text x="289" y="205" font-size="12" text-anchor="middle" fill="#53676d">结构元 B（3×3 全 1）</text>
+<rect x="470" y="54" width="130" height="130" fill="#fffdf9" stroke="#dce8e4"/>
+<rect x="522" y="106" width="26" height="26" fill="#147f80"/>
+<text x="535" y="205" font-size="12" text-anchor="middle" fill="#53676d">输出：只剩中心像素为 1</text>
+<g stroke="#147f80" stroke-width="3.5" fill="none" marker-end="url(#ae)">
+<path d="M162 119 H244"/><path d="M330 119 H464"/>
+</g>
+<text x="203" y="108" font-size="12" text-anchor="middle" fill="#53676d">对每个位置</text>
+<defs><marker id="ae" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#147f80"/></marker></defs>
+</svg>
+<figcaption>腐蚀的局部规则：把结构元 <code>B</code> 的中心对准每个像素，只有当 <code>B</code> 覆盖的整个邻域都属于前景时，该位置的输出才为 1。因此一个 3×3 的前景块被 3×3 的结构元腐蚀后只剩中心一个像素——这就是“腐蚀让前景变瘦”的像素级原因。膨胀的判据相反：只要邻域内<em>存在</em>前景，输出即为 1。图为教学示意：结构元按集合定义画成全 1 方形，仓库实现实际使用椭圆结构元。</figcaption>
+</figure>
 <p class="note">本仓库用的是椭圆结构元：<code>getStructuringElement(MORPH_ELLIPSE, (k, k))</code>，尺寸 <code>k</code> 直接取参数 <code>kernel</code>（<code>3…31</code> 的奇数）。椭圆比方形更接近各向同性的圆形邻域，代价是略慢。</p>
 </section>
 
