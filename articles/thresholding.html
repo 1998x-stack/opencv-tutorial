@@ -107,6 +107,28 @@ ul.plain{padding-left:1.2rem}ul.plain li{margin:.45rem 0}
 </math>
 </div>
 </div>
+<p>下面把这一步画出来：横轴遍历 <code>0…255</code> 的候选阈值，纵轴是每个 <code>t</code> 对应的类间方差 <code>σ²_B(t)</code>；曲线<strong>峰值</strong>所在的位置就是 <code>t*</code>。双峰越清晰，峰就越尖、越稳定。</p>
+<figure>
+<svg role="img" aria-labelledby="fig-scan-title fig-scan-desc" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+<title id="fig-scan-title">类间方差随候选阈值 t 的变化与峰值位置</title>
+<desc id="fig-scan-desc">横轴是候选阈值 t（从 0 到 255），纵轴是类间方差 σ²_B(t)；曲线两端趋近于零，在双峰谷底对应的 t 星处取得最大值。</desc>
+<rect width="680" height="280" rx="16" fill="#f3f9f6"/>
+<line x1="60" y1="236" x2="624" y2="236" stroke="#53676d" stroke-width="2"/>
+<line x1="60" y1="52" x2="60" y2="236" stroke="#53676d" stroke-width="2"/>
+<path d="M60 234 C150 228 235 70 300 54 C365 70 450 228 540 234 C575 236 600 236 624 236" fill="none" stroke="#147f80" stroke-width="3"/>
+<line x1="300" y1="54" x2="300" y2="236" stroke="#7461ba" stroke-width="2.5" stroke-dasharray="6 5"/>
+<circle cx="300" cy="54" r="5" fill="#7461ba"/>
+<text x="300" y="44" font-size="13" text-anchor="middle" fill="#7461ba">t*</text>
+<g font-size="12" fill="#53676d" text-anchor="middle">
+<text x="60" y="256">0</text><text x="342" y="256">t</text><text x="624" y="256">255</text>
+<text x="60" y="70" text-anchor="start">σ²_B(t)</text>
+</g>
+<text x="196" y="150" font-size="12" fill="#53676d">扫描全部候选 → 取峰值</text>
+<g stroke="#d06d4d" stroke-width="3" fill="none" marker-end="url(#as)"><path d="M196 158 C210 178 240 190 268 198"/></g>
+<defs><marker id="as" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#d06d4d"/></marker></defs>
+</svg>
+<figcaption>一次完整的 Otsu 扫描：对每个候选阈值 <code>t</code> 计算 <code>σ²_B(t)</code> 并记录最大值。曲线在两端趋近于零（退化为单一类），仅在双峰之间隆起一个峰，峰顶即 <code>t*</code>。当直方图不是双峰时，这条曲线会变得平坦或出现多个近似峰，<code>argmax</code> 的结果随之不稳定——这正是下一节三个合成预设要暴露的边界。</figcaption>
+</figure>
 <p class="note">分母 <code>ω(t)·(1−ω(t))</code> 在 <code>ω(t)=0</code> 或 <code>1</code>（阈值落在直方图两端之外）时为 0。参考实现显式地把这些位置排除，避免除零产生 NaN——这是<strong>工程实现</strong>的必要处理，论文级公式默认概率非退化。</p>
 </section>
 
